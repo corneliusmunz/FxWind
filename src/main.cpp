@@ -29,8 +29,6 @@ WiFiUDP Udp;
 #define PLOT_BAR_DEFAULT_COLOR TFT_GREEN
 #define PLOT_BAR_ALERT_COLOR TFT_RED
 static int windspeedHistoryArray[EVALUATION_RANGE];
-static int y[EVALUATION_RANGE];
-
 
 // global variables
 long counter;
@@ -328,7 +326,7 @@ void drawGrid() {
   {
     for (size_t j = 0; j < 1; j+=10)
     {
-      display.drawLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, PLOT_OFFSET_X + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, GRID_COLOR);
+      display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, 4, GRID_COLOR);
     }
   }
   
@@ -340,7 +338,6 @@ void drawGrid() {
 void drawWindspeedDisplayBarplot()
 {
   int h = PLOT_HEIGHT;
-  int barWidth = 1;
 
   drawGrid();
 
@@ -348,14 +345,14 @@ void drawWindspeedDisplayBarplot()
   {
     int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x;
 
-    display.fillRect(xpos, PLOT_OFFSET_Y, barWidth, PLOT_HEIGHT, TFT_BLACK); // erase drawing
+    display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
     if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD*10)
     {
-      display.fillRect(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), barWidth, min(windspeedHistoryArray[x], 100), PLOT_BAR_ALERT_COLOR);
+      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_ALERT_COLOR);
     }
     else
     {
-      display.fillRect(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), barWidth, min(windspeedHistoryArray[x], 100), PLOT_BAR_DEFAULT_COLOR);
+      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_DEFAULT_COLOR);
     }
   }
 }
@@ -459,19 +456,6 @@ void loop(void)
     float windspeed = calculateWindspeed(counter - lastCounter);
     updateWindspeedArray(windspeed);
     WindspeedEvaluation evaluationResult = evaluateWindspeed();
-
-    // if (evaluationResult.NumberOfExceededRanges > 0) {
-    //   Serial.print("EvaluationRanges:");
-    //   Serial.print(evaluationResult.NumberOfExceededRanges, DEC);
-    //   Serial.print(" StartingIndexes:");
-    //   for (size_t i = 0; i < evaluationResult.NumberOfExceededRanges; i++)
-    //   {
-    //     Serial.print(evaluationResult.RangeStartIndex[i]);
-    //     Serial.print(",");
-    //   }
-    //   Serial.println();
-    // }
-
     
     lastMillis = currentMillis;
     lastCounter = counter;
@@ -483,7 +467,5 @@ void loop(void)
     drawMenuButtons();
     display.display();
 
-    // Serial.print("Save data: ");
-    // Serial.println(getLogCsvRow(windspeed));
   }
 }
