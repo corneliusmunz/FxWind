@@ -11,15 +11,28 @@ WiFiUDP Udp;
 
 // constants
 #define WINDSPEED_PIN 21
-#define BAR_COUNT 75
-#define EVALUATION_RANGE 60
+#define BAR_COUNT 300
+#define EVALUATION_RANGE 300
+#define SAMPLE_RATE = 250 // ms
 static int windspeedHistoryArray[EVALUATION_RANGE];
 static int y[BAR_COUNT];
-static uint32_t colors[BAR_COUNT];
 static constexpr size_t PLOT_HEIGHT = 100;
 uint32_t okColor = display.color888(0, 255, 0);
 uint32_t nokColor = display.color888(255, 0, 0);
 
+// global variables
+long counter;
+long lastCounter;
+int displayUpadteDivider;
+unsigned long lastMillis;
+const unsigned long period = 250;
+const char ssid[] = "";
+const char pass[] = "";
+static const char ntpServerName[] = "de.pool.ntp.org";
+unsigned int localPort = 8888;
+const int timeZone = 0;
+const int NTP_PACKET_SIZE = 48;
+byte packetBuffer[NTP_PACKET_SIZE];
 
 struct WindspeedEvaluation
 {
@@ -27,43 +40,32 @@ struct WindspeedEvaluation
   float MinWindspeed;
   float AverageWindspeed;
   int NumberOfExceededRanges;
+  int RangeStartIndex[15];
 };
 
-// global variables
-long counter;
-long lastCounter;
-int displayUpadteDivider;
-unsigned long lastMillis;
-const unsigned long period = 1000;
-const char ssid[] = "";
-const char pass[] = "";
-static const char ntpServerName[] = "de.pool.ntp.org";
-unsigned int localPort = 8888; 
-const int timeZone = 0;
-const int NTP_PACKET_SIZE = 48;
-byte packetBuffer[NTP_PACKET_SIZE];
 
-String getWindspeedString(float windspeedValue, bool addUnitSymbol = false) {
+
+String getWindspeedString(float windspeedValue, bool addUnitSymbol = false)
+{
   char stringbuffer[100];
-  if (addUnitSymbol) {
+  if (addUnitSymbol)
+  {
     sprintf(stringbuffer, "%.1f m/s  ", windspeedValue);
-  } else {
+  }
+  else
+  {
     sprintf(stringbuffer, "%.1f", windspeedValue);
   }
   return String(stringbuffer);
 }
 
-String getWindspeedEvaluationString(WindspeedEvaluation windspeedEvaluation) {
-  return 
-    "Max:" 
-    + String(windspeedEvaluation.MaxWindspeed) 
-    + " Min:"
-    + String(windspeedEvaluation.MinWindspeed)
-    + " Average:"
-    + String(windspeedEvaluation.AverageWindspeed);
+String getWindspeedEvaluationString(WindspeedEvaluation windspeedEvaluation)
+{
+  return "Max:" + String(windspeedEvaluation.MaxWindspeed) + " Min:" + String(windspeedEvaluation.MinWindspeed) + " Average:" + String(windspeedEvaluation.AverageWindspeed);
 }
 
-String getTimestampString() {
+String getTimestampString()
+{
   time_t t = now();
   char stringbuffer[100];
   sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t)); // String(year(t)) + "-" + String(month(t)) + "-" + String(day(t)) + " " + String(hour(t)) + ":" + String(minute(t)) + ":" + String(second(t));
@@ -84,62 +86,99 @@ void incrementCounter()
 
 // windspeed in m/s
 // 20 impulses in one turn per second ==> 1.75m/s
-float calculateWindspeed(int deltaCounter) {
+float calculateWindspeed(int deltaCounter)
+{
   return ((float)deltaCounter / 20.0f * 1.75f);
 }
 
-float getMaxValueOfWindspeedHistory(int evaluationSamples=4) {
+float getMaxValueOfWindspeedHistory(int evaluationSamples = 4)
+{
   int maxValue = 0;
   for (size_t i = 0; i < evaluationSamples; i++)
   {
-    if (windspeedHistoryArray[i]>maxValue) {
+    if (windspeedHistoryArray[i] > maxValue)
+    {
       maxValue = windspeedHistoryArray[i];
     }
   }
-  return (float)maxValue/10.0f;
+  return (float)maxValue / 10.0f;
 }
 
-void updateWindspeedArray(float windspeed){
+void updateWindspeedArray(float windspeed)
+{
   for (size_t i = EVALUATION_RANGE; i > 0; i--)
   {
-    windspeedHistoryArray[i] = windspeedHistoryArray[i-1];
+    windspeedHistoryArray[i] = windspeedHistoryArray[i - 1];
   }
-  windspeedHistoryArray[0] = (int)(windspeed*10.0f);
-
-  // for (size_t i = 0; i < EVALUATION_RANGE; i++)
-  // {
-  //   Serial.print(i, DEC);
-  //   Serial.print(":");
-  //   Serial.print(windspeedHistoryArray[i], DEC);
-  //   Serial.print(", ");
-  // }
-  // Serial.println("");
-  
+  windspeedHistoryArray[0] = (int)(windspeed * 10.0f);
 }
 
-WindspeedEvaluation evaluateWindspeed() {
+WindspeedEvaluation evaluateWindspeed()
+{
 
-  int maxWindspeed=0;
-  int minWindspeed=INT_MAX;
-  long sumWindspeed=0;
-  for (size_t i = 0; i < EVALUATION_RANGE; i++)
+  int maxWindspeed = 0;
+  int minWindspeed = INT_MAX;
+  long sumWindspeed = 0;
+  int windspeedThreshold = 10;
+
+  int rangeCounter=0;
+  int exceededRangesCounter = 0;
+  int exceededRangesIndex[15];
+
+ 
+  for (size_t i = 0; i < 15; i++)
   {
-    if (windspeedHistoryArray[i]>maxWindspeed) {
-      maxWindspeed=windspeedHistoryArray[i];
+    //evaluationResult.RangeStartIndex[i]=0;
+    exceededRangesIndex[i]=0;
+  }
+  
+
+  for (size_t i = EVALUATION_RANGE; i > 0; i--)
+  {
+    // max
+    if (windspeedHistoryArray[i] > maxWindspeed)
+    {
+      maxWindspeed = windspeedHistoryArray[i];
     }
-    if (windspeedHistoryArray[i]<minWindspeed)
+    // min
+    if (windspeedHistoryArray[i] < minWindspeed)
     {
       minWindspeed = windspeedHistoryArray[i];
     }
-
     sumWindspeed += windspeedHistoryArray[i];
+
+    if (windspeedHistoryArray[i] > windspeedThreshold) 
+    {
+      rangeCounter++;
+    }
+
+    if (rangeCounter >= 20)
+    {
+      exceededRangesIndex[exceededRangesCounter] = i;
+      exceededRangesCounter++;
+      rangeCounter=0;
+      // Serial.print("exceededRangesCounter: ");
+      // Serial.print(exceededRangesCounter);
+      // Serial.print(" i:");
+      // Serial.println(i);
+    }
+
+    if (windspeedHistoryArray[i]<= windspeedThreshold)
+    {
+      //Serial.print("reset rangeCounter");
+      rangeCounter = 0;
+    }
   }
 
   WindspeedEvaluation evaluationResult;
-
-  evaluationResult.MaxWindspeed = (float)maxWindspeed/10.0f;
-  evaluationResult.MinWindspeed = (float)minWindspeed/10.0f;
-  evaluationResult.AverageWindspeed = (float)(sumWindspeed/EVALUATION_RANGE)/10.0f;
+  evaluationResult.NumberOfExceededRanges = exceededRangesCounter;
+  evaluationResult.MaxWindspeed = (float)maxWindspeed / 10.0f;
+  evaluationResult.MinWindspeed = (float)minWindspeed / 10.0f;
+  evaluationResult.AverageWindspeed = (float)(sumWindspeed / EVALUATION_RANGE) / 10.0f;
+  for (size_t i = 0; i < 15; i++)
+  {
+    evaluationResult.RangeStartIndex[i]=exceededRangesIndex[i];
+  }
 
   return evaluationResult;
 }
@@ -169,7 +208,7 @@ void sendNTPpacket(IPAddress &address)
 
 time_t getNtpTime()
 {
-  IPAddress ntpServerIP; 
+  IPAddress ntpServerIP;
 
   while (Udp.parsePacket() > 0)
     ; // discard any previously received packets
@@ -201,9 +240,10 @@ time_t getNtpTime()
   return 0; // return 0 if unable to get the time
 }
 
-void drawMenuButton(String label, int xPos, bool isPressed = false) {
-  display.setFont(&fonts::AsciiFont8x16);
-  if (!isPressed)
+void drawMenuButton(String label, int xPos, bool isPressed = false)
+{
+  display.setFont(&fonts::DejaVu12);
+  if (isPressed)
   {
     display.setColor(TFT_NAVY);
     display.setTextColor(TFT_NAVY, TFT_BLACK);
@@ -213,16 +253,16 @@ void drawMenuButton(String label, int xPos, bool isPressed = false) {
     display.setColor(TFT_WHITE);
     display.setTextColor(TFT_WHITE, TFT_BLACK);
   }
-  display.drawRect(xPos, 218, 64, 24);
-  display.drawCenterString(label, 64, 223);
+  display.drawRect(xPos, 220, 64, 21);
+  display.drawCenterString(label, xPos+33, 226);
 }
 
-void drawMenuButtons() {
-  display.setFont(&fonts::AsciiFont8x16);
+void drawMenuButtons()
+{
+  
   if (M5.BtnA.isHolding())
   {
-    display.setColor(TFT_NAVY);
-    display.setTextColor(TFT_NAVY, TFT_BLACK);
+    drawMenuButton("ABCD", 31, true); //64
     if (!M5.Speaker.isPlaying())
     {
       M5.Speaker.tone(1000, 500);
@@ -230,39 +270,29 @@ void drawMenuButtons() {
   }
   else
   {
-    display.setColor(TFT_WHITE);
-    display.setTextColor(TFT_WHITE, TFT_BLACK);
+    drawMenuButton("ABCD", 31, false);
   }
-  display.drawRect(31, 218, 64, 24);
-  display.drawCenterString("ABCD", 64, 223);
+
 
   if (M5.BtnB.isPressed())
   {
-    display.setColor(TFT_NAVY);
-    display.setTextColor(TFT_NAVY, TFT_BLACK);
+    drawMenuButton("EFGH", 127, true); // 160
     M5.Speaker.tone(500, 100);
   }
   else
   {
-    display.setColor(TFT_WHITE);
-    display.setTextColor(TFT_WHITE, TFT_BLACK);
+    drawMenuButton("EFGH", 127, false);
   }
-  display.drawRect(127, 218, 64, 24);
-  display.drawCenterString("EFGH", 160, 223);
 
   if (M5.BtnC.wasPressed())
   {
-    display.setColor(TFT_NAVY);
-    display.setTextColor(TFT_NAVY, TFT_BLACK);
+    drawMenuButton("IJKL", 223, true); //256
     M5.Speaker.tone(2000, 100);
   }
   else
   {
-    display.setColor(TFT_WHITE);
-    display.setTextColor(TFT_WHITE, TFT_BLACK);
+    drawMenuButton("IJKL", 223, false);
   }
-  display.drawRect(223, 218, 64, 24);
-  display.drawCenterString("IJKL", 256, 223);
 }
 
 void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
@@ -276,62 +306,83 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
   {
     display.setTextColor(TFT_WHITE, TFT_BLACK);
   }
-  display.drawString(getWindspeedString(windspeed, true), 1, 110);
+  display.drawString(getWindspeedString(windspeed, true), 1, 124);
 
   display.setFont(&fonts::DejaVu18);
   display.setTextColor(TFT_WHITE, TFT_BLACK);
-  display.drawString(getWindspeedEvaluationString(windspeedEvaluation), 1, 185);
+  display.drawString(getWindspeedEvaluationString(windspeedEvaluation), 1, 195);
 }
 
-void drawWindspeedDisplayBarplot(float windspeed)
+void drawGrid() {
+  int xOffset = 18;
+  display.setFont(&fonts::DejaVu12);
+  display.setTextColor(TFT_WHITE, TFT_BLACK);
+  for (size_t i = 0; i < 10; i=i+2)
+  {
+    display.drawString(String(i), 8, 100-i*10);
+  }
+  display.drawString("10", 0, 0);
+  display.drawLine(xOffset, 6, display.width(), 6, TFT_WHITE);
+  display.drawLine(xOffset, PLOT_HEIGHT+7+1, display.width(), PLOT_HEIGHT+7+1, TFT_WHITE);
+} 
+
+void drawWindspeedDisplayBarplot()
 {
   int h = PLOT_HEIGHT;
-  int yOffset = display.height() - PLOT_HEIGHT;
+  int yOffset = display.height() - PLOT_HEIGHT+7;
   int plotWidth = 300;
-  int xOffset = 10;
+  int xOffset = 20;
 
-  for (int x = 3; x < BAR_COUNT; ++x)
+  drawGrid();
+
+  display.fillRect(xOffset, 7, BAR_COUNT, PLOT_HEIGHT, TFT_BLACK);
+
+  //drawGrid();
+
+  for (int x = 0; x < BAR_COUNT; x++)
   {
+    int xpos = xOffset + BAR_COUNT - x;
+    int barWidth = 1; // plotWidth / BAR_COUNT;
 
-    if (x == BAR_COUNT - 1)
+    if (windspeedHistoryArray[x] >= 80)
     {
-      y[x] = (int)(windspeed * 10.0f);
+      display.fillRect(xpos, 7 + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), barWidth, min(windspeedHistoryArray[x], 100), TFT_RED);
     }
     else
     {
-      y[x] = y[x + 1];
-    }
-
-    int xpos = xOffset + (x * plotWidth / BAR_COUNT);
-    int barWidth = 3; // plotWidth / BAR_COUNT;
-
-    display.fillRect(xpos, 0, barWidth, PLOT_HEIGHT, TFT_BLACK);
-    if (y[x] >= 80 && y[x - 1] >= 80 && y[x - 2] >= 80 && y[x - 3] >= 80)
-    {
-      display.fillRect(xpos, PLOT_HEIGHT - y[x], barWidth, y[x], TFT_RED);
-    }
-    else
-    {
-      if (y[x] >= 80 && y[x - 1] >= 80 && y[x - 2] >= 80)
-      {
-        display.fillRect(xpos, PLOT_HEIGHT - y[x], barWidth, y[x], TFT_ORANGE);
-      }
-      else
-      {
-        if (y[x] >= 80)
-        {
-          display.fillRect(xpos, PLOT_HEIGHT - y[x], barWidth, y[x], TFT_YELLOW);
-        }
-        else
-        {
-          display.fillRect(xpos, PLOT_HEIGHT - y[x], barWidth, y[x], TFT_GREEN);
-        }
-      }
+      display.fillRect(xpos, 7 + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), barWidth, min(windspeedHistoryArray[x], 100), TFT_GREEN);
     }
   }
 }
 
-void setupSoundModule() {
+void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
+
+  display.setFont(&fonts::DejaVu9);
+  display.setTextColor(TFT_WHITE, TFT_RED);
+  int y = PLOT_HEIGHT + 7 + 2 +1;
+  int height = 10;
+  display.fillRect(20, y, 300, height, TFT_GREEN);
+  for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
+  {
+    int x = 21 + BAR_COUNT - windspeedEvaluation.RangeStartIndex[i] - 20;
+    
+    int width = min(20, x - 20);
+    if (i==0) {
+      Serial.print("index: ");
+      Serial.print(windspeedEvaluation.RangeStartIndex[i], DEC);
+      Serial.print(" x: ");
+      Serial.print(x, DEC);
+      Serial.print(" width:");
+      Serial.println(width, DEC);
+    }
+
+    display.fillRect(x, y, width, height, TFT_RED);
+    display.drawString(String(i+1), x+7, y);
+  }
+}
+
+void setupSoundModule()
+{
   auto cfg = M5.config();
   cfg.external_speaker.atomic_spk = true;
   cfg.external_speaker.module_display = true;
@@ -339,7 +390,8 @@ void setupSoundModule() {
   M5.Speaker.begin();
 }
 
-void setupWifi() {
+void setupWifi()
+{
   WiFi.begin(ssid, pass);
 
   while (WiFi.status() != WL_CONNECTED)
@@ -352,7 +404,8 @@ void setupWifi() {
   Serial.println(WiFi.localIP());
 }
 
-void setupNtpTimeSyncProvider() {
+void setupNtpTimeSyncProvider()
+{
   Serial.println("Starting UDP");
   Udp.begin(localPort);
   Serial.println("waiting for sync");
@@ -360,12 +413,14 @@ void setupNtpTimeSyncProvider() {
   setSyncInterval(300);
 }
 
-void setupWindspeedIO() {
+void setupWindspeedIO()
+{
   pinMode(WINDSPEED_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN), incrementCounter, RISING);
 }
 
-void setupDisplay() {
+void setupDisplay()
+{
   display.init();
   display.startWrite();
   display.fillScreen(TFT_BLACK);
@@ -378,17 +433,12 @@ void setupDisplay() {
   {
     display.setRotation(display.getRotation() ^ 1);
   }
-
-  for (int x = 0; x < BAR_COUNT; ++x)
-  {
-    y[x] = 0;
-  }
 }
 
 void setup(void)
 {
   M5.begin();
-  
+
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
@@ -398,29 +448,38 @@ void setup(void)
 
 void loop(void)
 {
-  long currentMillis = millis();            
-  if (currentMillis - lastMillis >= period) 
+  long currentMillis = millis();
+  if (currentMillis - lastMillis >= period)
   {
     M5.update();
-    Serial.println("counter: "+String(counter));
     float windspeed = calculateWindspeed(counter - lastCounter);
     updateWindspeedArray(windspeed);
     WindspeedEvaluation evaluationResult = evaluateWindspeed();
+
+    // if (evaluationResult.NumberOfExceededRanges > 0) {
+    //   Serial.print("EvaluationRanges:");
+    //   Serial.print(evaluationResult.NumberOfExceededRanges, DEC);
+    //   Serial.print(" StartingIndexes:");
+    //   for (size_t i = 0; i < evaluationResult.NumberOfExceededRanges; i++)
+    //   {
+    //     Serial.print(evaluationResult.RangeStartIndex[i]);
+    //     Serial.print(",");
+    //   }
+    //   Serial.println();
+    // }
+
+    
     lastMillis = currentMillis;
     lastCounter = counter;
 
     display.waitDisplay();
     drawWindspeedDisplayValues(windspeed, evaluationResult);
-    displayUpadteDivider++;
-    if (displayUpadteDivider==4) {
-      drawWindspeedDisplayBarplot(getMaxValueOfWindspeedHistory());
-      displayUpadteDivider=0;
-    }
+    drawWindspeedDisplayBarplot();
+    drawWindspeedEvaluationBars(evaluationResult);
     drawMenuButtons();
     display.display();
 
     // Serial.print("Save data: ");
     // Serial.println(getLogCsvRow(windspeed));
   }
-
 }
