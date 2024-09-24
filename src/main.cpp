@@ -14,7 +14,7 @@ WiFiUDP Udp;
 #define EVALUATION_RANGE 300 
 #define SAMPLE_RATE 1000 // ms
 #define WINDSPEED_THRESHOLD 8 // m/s
-#define WINDSPEED_DURATION_RANGE 20 // s
+#define WINDSPEED_DURATION_RANGE 20 // samples
 #define PLOT_OFFSET_X 20
 #define PLOT_OFFSET_Y 5
 #define PLOT_HEIGHT 100
@@ -363,7 +363,7 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
   display.setFont(&fonts::DejaVu9);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
   int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
-  display.fillRect(PLOT_OFFSET_X-1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
+  display.fillRect(PLOT_OFFSET_X - 1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
   for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
   {
     int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
