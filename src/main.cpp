@@ -14,12 +14,14 @@ WiFiUDP Udp;
 #define EVALUATION_RANGE 300 
 #define SAMPLE_RATE 1000 // ms
 #define WINDSPEED_THRESHOLD 8 // m/s
+#define WINDSPEED_DURATION_RANGE 20 // s
 #define PLOT_OFFSET_X 20
 #define PLOT_OFFSET_Y 5
 #define PLOT_HEIGHT 100
 #define EVALUATION_BAR_HEIGHT 10
 #define BUTTON_HEIGHT 16
 #define TXT_DEFAULT_COLOR TFT_WHITE
+#define TXT_ALERT_COLOR TFT_RED
 #define TXT_DEFAULT_BACKGROUND_COLOR TFT_BLACK
 #define TXT_ALERT_BACKGROUND_COLOR TFT_RED
 #define TXT_BUTTON_PRESSED_COLOR TFT_NAVY
@@ -76,7 +78,7 @@ String getWindspeedEvaluationSingleString(float windspeedValue)
 
 String getWindspeedEvaluationString(WindspeedEvaluation windspeedEvaluation)
 {
-  return "MAX:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MaxWindspeed) + " MIN:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MinWindspeed) + " AVRG:" + getWindspeedEvaluationSingleString(windspeedEvaluation.AverageWindspeed);
+  return "MAX:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MaxWindspeed) + " MIN:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MinWindspeed) + " AVG:" + getWindspeedEvaluationSingleString(windspeedEvaluation.AverageWindspeed);
 }
 
 String getTimestampString()
@@ -108,7 +110,7 @@ float calculateWindspeed(int deltaCounter)
 
 void updateWindspeedArray(float windspeed)
 {
-  for (size_t i = EVALUATION_RANGE; i > 0; i--)
+  for (size_t i = EVALUATION_RANGE; i > 0; --i)
   {
     windspeedHistoryArray[i] = windspeedHistoryArray[i - 1];
   }
@@ -134,7 +136,7 @@ WindspeedEvaluation evaluateWindspeed()
   }
   
 
-  for (size_t i = EVALUATION_RANGE; i > 0; i--)
+  for (size_t i = EVALUATION_RANGE; i > 0; --i)
   {
     if (windspeedHistoryArray[i] > maxWindspeed)
     {
@@ -152,7 +154,7 @@ WindspeedEvaluation evaluateWindspeed()
       rangeCounter++;
     }
 
-    if (rangeCounter >= 20)
+    if (rangeCounter == WINDSPEED_DURATION_RANGE)
     {
       exceededRangesIndex[exceededRangesCounter] = i;
       exceededRangesCounter++;
@@ -305,7 +307,6 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
     display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
   }  
   display.drawString(getWindspeedString(windspeed, true), 1, yPos);
-
   display.setFont(&fonts::DejaVu18);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
   String evaluationString = getWindspeedEvaluationString(windspeedEvaluation);
@@ -343,7 +344,7 @@ void drawWindspeedDisplayBarplot()
 
   for (int x = 0; x < EVALUATION_RANGE; x++)
   {
-    int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x;
+    int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x - 1;
 
     display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
     if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD*10)
@@ -361,23 +362,12 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
 
   display.setFont(&fonts::DejaVu9);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-  int y = PLOT_HEIGHT + PLOT_OFFSET_Y + 3;
-  display.fillRect(PLOT_OFFSET_X, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
+  int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
+  display.fillRect(PLOT_OFFSET_X-1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
   for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
   {
-    int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - 20;
-
-    int width = min(20, x - 20);
-    if (i==0) {
-      Serial.print("index: ");
-      Serial.print(windspeedEvaluation.RangeStartIndex[i], DEC);
-      Serial.print(" x: ");
-      Serial.print(x, DEC);
-      Serial.print(" width:");
-      Serial.println(width, DEC);
-    }
-
-    display.fillRect(x, y, width, EVALUATION_BAR_HEIGHT, TFT_RED);
+    int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
+    display.fillRect(x, y, WINDSPEED_DURATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_RED);
     display.drawString(String(i+1), x+7, y);
   }
 }
