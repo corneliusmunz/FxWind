@@ -89,13 +89,24 @@ String getTimestampString()
 {
   time_t t = now();
   char stringbuffer[100];
-  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t)); // String(year(t)) + "-" + String(month(t)) + "-" + String(day(t)) + " " + String(hour(t)) + ":" + String(minute(t)) + ":" + String(second(t));
+  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t)); 
   return String(stringbuffer);
 }
 
 String getLogCsvRow(float windspeedValue, char separationChar = ',')
 {
   return getTimestampString() + separationChar + getWindspeedString(windspeedValue);
+}
+
+String getLogFilePath() {
+  time_t t = now();
+  char stringbuffer[100];
+  sprintf(stringbuffer, "/logs/%4u-%02u-%02u_windspeed.csv", year(t), month(t), day(t)); 
+  return String(stringbuffer);
+}
+
+String getLogFileHeader() {
+  return "Timestamp, Windspeed[m/s]";
 }
 
 // interrupt callback function for impuls counter of windspeed sensor
@@ -429,12 +440,163 @@ String getWindspeedJson()
   return jsonString;
 }
 
+void createDir(fs::FS &fs, const char *path)
+{
+  Serial.printf("Creating Dir: %s\n", path);
+  if (fs.mkdir(path))
+  {
+    Serial.println("Dir created");
+  }
+  else
+  {
+    Serial.println("mkdir failed");
+  }
+}
+
+void readFile(fs::FS &fs, const char *path)
+{
+  Serial.printf("Reading file: %s\n", path);
+
+  File file = fs.open(path);
+  if (!file)
+  {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  Serial.print("Read from file: ");
+  while (file.available())
+  {
+    Serial.write(file.read());
+  }
+  file.close();
+}
+
+void writeFile(fs::FS &fs, const char *path, const char *message)
+{
+  Serial.printf("Writing file: %s\n", path);
+
+  File file = fs.open(path, FILE_WRITE);
+  if (!file)
+  {
+    Serial.println("Failed to open file for writing");
+    return;
+  }
+  if (file.print(message))
+  {
+    Serial.println("File written");
+  }
+  else
+  {
+    Serial.println("Write failed");
+  }
+  file.close();
+}
+
+void writeLineToFile(fs::FS &fs, const char *path, const char *message)
+{
+  Serial.printf("Writing file: %s\n", path);
+
+  File file = fs.open(path, FILE_WRITE);
+  if (!file)
+  {
+    Serial.println("Failed to open file for writing");
+    return;
+  }
+  if (file.println(message))
+  {
+    Serial.println("File written");
+  }
+  else
+  {
+    Serial.println("Write failed");
+  }
+  file.close();
+}
+
+void appendFile(fs::FS &fs, const char *path, const char *message)
+{
+  Serial.printf("Appending to file: %s\n", path);
+
+  File file = fs.open(path, FILE_APPEND);
+  if (!file)
+  {
+    Serial.println("Failed to open file for appending");
+    return;
+  }
+  if (file.print(message))
+  {
+    Serial.println("Message appended");
+  }
+  else
+  {
+    Serial.println("Append failed");
+  }
+  file.close();
+}
+
+void appendLineToFile(fs::FS &fs, const char *path, const char *message)
+{
+
+  File file = fs.open(path, FILE_APPEND);
+  if (!file)
+  {
+    Serial.println("Failed to open file for appending");
+    writeLineToFile(fs, path, getLogFileHeader().c_str());
+    return;
+  }
+  if (!file.println(message))
+  {
+    Serial.println("Append failed");
+  }
+  file.close();
+}
+
+void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
+{
+  Serial.printf("Listing directory: %s\n", dirname);
+
+  File root = fs.open(dirname);
+  if (!root)
+  {
+    Serial.println("Failed to open directory");
+    return;
+  }
+  if (!root.isDirectory())
+  {
+    Serial.println("Not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file)
+  {
+    if (file.isDirectory())
+    {
+      Serial.print("  DIR : ");
+      Serial.println(file.name());
+      if (levels)
+      {
+        listDir(fs, file.name(), levels - 1);
+      }
+    }
+    else
+    {
+      Serial.print("  FILE: ");
+      Serial.print(file.name());
+      Serial.print("  SIZE: ");
+      Serial.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+
 void setupSoundModule()
 {
   auto cfg = M5.config();
   cfg.external_speaker.atomic_spk = true;
   cfg.external_speaker.module_display = true;
-  M5.Speaker.setVolume(200);
+  M5.Speaker.setVolume(128);
   M5.Speaker.begin();
 }
 
@@ -472,6 +634,7 @@ void setupDisplay()
   display.init();
   display.startWrite();
   display.fillScreen(TFT_BLACK);
+  display.endWrite();
 
   if (display.isEPD())
   {
@@ -504,10 +667,50 @@ void setupLittleFS() {
   }
 }
 
+void setupSDCard() {
+  if (!SD.begin(GPIO_NUM_4, SPI, 25000000))
+  {
+    Serial.println("Card Mount Failed");
+    return;
+  }
+  uint8_t cardType = SD.cardType();
+
+  if (cardType == CARD_NONE)
+  {
+    Serial.println("No SD card attached");
+    return;
+  }
+
+  Serial.print("SD Card Type: ");
+  if (cardType == CARD_MMC)
+  {
+    Serial.println("MMC");
+  }
+  else if (cardType == CARD_SD)
+  {
+    Serial.println("SDSC");
+  }
+  else if (cardType == CARD_SDHC)
+  {
+    Serial.println("SDHC");
+  }
+  else
+  {
+    Serial.println("UNKNOWN");
+  }
+  Serial.printf("SD Card Size: %lluMB\n", SD.cardSize() / (1024 * 1024));
+  Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
+  Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
+
+  createDir(SD,"/logs");
+  listDir(SD, "/logs", 0);
+}
+
 
 void setup(void)
 {
   M5.begin();
+  setupSDCard();
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
@@ -524,11 +727,11 @@ void loop(void)
   {
     M5.update();
     float windspeed = calculateWindspeed(counter - lastCounter);
-    updateWindspeedArray(windspeed);
-    WindspeedEvaluation evaluationResult = evaluateWindspeed();
-    
     lastMillis = currentMillis;
     lastCounter = counter;
+    updateWindspeedArray(windspeed);
+    WindspeedEvaluation evaluationResult = evaluateWindspeed();
+    appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 
     display.waitDisplay();
     drawWindspeedDisplayValues(windspeed, evaluationResult);
@@ -536,6 +739,5 @@ void loop(void)
     drawWindspeedEvaluationBars(evaluationResult);
     drawMenuButtons();
     display.display();
-
   }
 }
