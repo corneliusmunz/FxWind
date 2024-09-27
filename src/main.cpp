@@ -5,9 +5,13 @@
 #include <TimeLib.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
+#include <LittleFS.h>
 
 M5GFX display;
 WiFiUDP Udp;
+AsyncWebServer server(80);
 
 // constants
 #define WINDSPEED_PIN 21
@@ -372,6 +376,59 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
   }
 }
 
+String getWindspeedStatisticJson()
+{
+  WindspeedEvaluation windspeedEvaluation = evaluateWindspeed();
+
+  JsonDocument jsonDocument;
+
+  jsonDocument["currentWindspeed"] = windspeedHistoryArray[0];
+  jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
+  jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
+  jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
+  jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
+
+  JsonArray evaluationArray = jsonDocument["evaluationArray"].to<JsonArray>();
+
+  // if (windspeedEvaluation.NumberOfExceededRanges > 0)
+  // for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
+  // {
+  //   /* code */
+  // }
+
+  evaluationArray.add(0);
+  evaluationArray.add(0);
+  evaluationArray.add(0);
+  evaluationArray.add(1);
+  evaluationArray.add(1);
+  evaluationArray.add(1);
+  evaluationArray.add(0);
+  evaluationArray.add(0);
+
+  String jsonString;
+  jsonDocument.shrinkToFit();
+  serializeJson(jsonDocument, jsonString);
+  return jsonString;
+}
+
+String getWindspeedJson()
+{
+  JsonDocument jsonDocument;
+
+  for (size_t i = 0; i < EVALUATION_RANGE; i++)
+  {
+    JsonObject arrayDocument = jsonDocument.add<JsonObject>();
+    arrayDocument["x"] = i;
+    arrayDocument["y"] = windspeedHistoryArray[EVALUATION_RANGE - 1 - i] / 10.0f;
+  }
+
+  String jsonString;
+  jsonDocument.shrinkToFit();
+  serializeJson(jsonDocument, jsonString);
+
+  return jsonString;
+}
+
 void setupSoundModule()
 {
   auto cfg = M5.config();
@@ -426,13 +483,36 @@ void setupDisplay()
   }
 }
 
+void setupServer() {
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/index.html"); });
+  server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "application/json", getWindspeedJson().c_str()); });
+  server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "application/json", getWindspeedStatisticJson().c_str()); });
+
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  server.begin();
+}
+
+void setupLittleFS() {
+  if (!LittleFS.begin())
+  {
+    Serial.println("An Error has occurred while mounting LittleFS");
+    return;
+  }
+}
+
+
 void setup(void)
 {
   M5.begin();
-
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
+  setupLittleFS();
+  setupServer();
   setupSoundModule();
   setupDisplay();
 }

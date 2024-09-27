@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>F3Wind</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Roboto);
+
+        body {
+            font-family: Roboto, sans-serif;
+        }
+
+        #chart {
+            max-width: 1024px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Wind measurement</h1>
+    <div id="chart"></div>
+    <script>
+        var options = {
+            series: [],
+            markers: {
+                size:5
+            },
+            chart: {
+                height: 350,
+                type: 'line',
+                toolbar : {
+                    show: false
+                }
+            },
+             zoom: {
+                enabled: false
+            },
+            tooltip: {
+                enabled: true
+            },
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'straight'
+            },
+            noData: {
+                text: 'Loading...'
+            },
+            title:{
+                text: 'Windspeed measurment [m/s] in the last 300s',
+                align: 'center'
+            },
+            grid: {
+                row: {
+                    colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+                    opacity: 0.5
+                },
+            },
+            xaxis: {
+                lines: {
+                    show: false,
+                }
+            }
+        };
+
+        var chart = new ApexCharts(document.querySelector("#chart"), options);
+        chart.render();
+
+        setInterval(function () {
+            axios({
+                method: 'GET',
+                url: '/windspeed',
+
+            }).then(function (response) {
+                chart.updateSeries([{
+                    name: 'Windspeed',
+                    data: response.data
+                }])
+            })
+        }, 1000);
+
+
+    </script>
+
+</body>
+
+</html>
