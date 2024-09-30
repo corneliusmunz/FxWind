@@ -15,9 +15,9 @@ AsyncWebServer server(80);
 
 // constants
 #define WINDSPEED_PIN 21
-#define EVALUATION_RANGE 300 
-#define SAMPLE_RATE 1000 // ms
-#define WINDSPEED_THRESHOLD 8 // m/s
+#define EVALUATION_RANGE 300
+#define SAMPLE_RATE 1000            // ms
+#define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
 #define PLOT_OFFSET_X 20
 #define PLOT_OFFSET_Y 5
@@ -57,8 +57,6 @@ struct WindspeedEvaluation
   int RangeStartIndex[15];
 };
 
-
-
 String getWindspeedString(float windspeedValue, bool addUnitSymbol = false)
 {
   char stringbuffer[100];
@@ -89,7 +87,7 @@ String getTimestampString()
 {
   time_t t = now();
   char stringbuffer[100];
-  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t)); 
+  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
   return String(stringbuffer);
 }
 
@@ -98,14 +96,16 @@ String getLogCsvRow(float windspeedValue, char separationChar = ',')
   return getTimestampString() + separationChar + getWindspeedString(windspeedValue);
 }
 
-String getLogFilePath() {
+String getLogFilePath()
+{
   time_t t = now();
   char stringbuffer[100];
-  sprintf(stringbuffer, "/logs/%4u-%02u-%02u_windspeed.csv", year(t), month(t), day(t)); 
+  sprintf(stringbuffer, "/logs/%4u-%02u-%02u_windspeed.csv", year(t), month(t), day(t));
   return String(stringbuffer);
 }
 
-String getLogFileHeader() {
+String getLogFileHeader()
+{
   return "Timestamp, Windspeed[m/s]";
 }
 
@@ -139,17 +139,14 @@ WindspeedEvaluation evaluateWindspeed()
   int minWindspeed = INT_MAX;
   long sumWindspeed = 0;
 
-  int rangeCounter=0;
+  int rangeCounter = 0;
   int exceededRangesCounter = 0;
   int exceededRangesIndex[15];
 
- 
   for (size_t i = 0; i < 15; i++)
   {
-    //evaluationResult.RangeStartIndex[i]=0;
-    exceededRangesIndex[i]=0;
+    exceededRangesIndex[i] = 0;
   }
-  
 
   for (size_t i = EVALUATION_RANGE; i > 0; --i)
   {
@@ -164,7 +161,7 @@ WindspeedEvaluation evaluateWindspeed()
     }
     sumWindspeed += windspeedHistoryArray[i];
 
-    if (windspeedHistoryArray[i] > WINDSPEED_THRESHOLD*10) 
+    if (windspeedHistoryArray[i] > WINDSPEED_THRESHOLD * 10)
     {
       rangeCounter++;
     }
@@ -173,7 +170,7 @@ WindspeedEvaluation evaluateWindspeed()
     {
       exceededRangesIndex[exceededRangesCounter] = i;
       exceededRangesCounter++;
-      rangeCounter=0;
+      rangeCounter = 0;
     }
 
     if (windspeedHistoryArray[i] <= WINDSPEED_THRESHOLD * 10)
@@ -189,7 +186,7 @@ WindspeedEvaluation evaluateWindspeed()
   evaluationResult.AverageWindspeed = (float)(sumWindspeed / EVALUATION_RANGE) / 10.0f;
   for (size_t i = 0; i < 15; i++)
   {
-    evaluationResult.RangeStartIndex[i]=exceededRangesIndex[i];
+    evaluationResult.RangeStartIndex[i] = exceededRangesIndex[i];
   }
 
   return evaluationResult;
@@ -272,10 +269,10 @@ void drawMenuButton(String label, int xPos, bool isPressed = false)
 
 void drawMenuButtons()
 {
-  
+
   if (M5.BtnA.isHolding())
   {
-    drawMenuButton("ABCD", 31, true); //64
+    drawMenuButton("ABCD", 31, true); // 64
     if (!M5.Speaker.isPlaying())
     {
       M5.Speaker.tone(1000, 500);
@@ -285,7 +282,6 @@ void drawMenuButtons()
   {
     drawMenuButton("ABCD", 31, false);
   }
-
 
   if (M5.BtnB.isPressed())
   {
@@ -299,7 +295,7 @@ void drawMenuButtons()
 
   if (M5.BtnC.wasPressed())
   {
-    drawMenuButton("IJKL", 223, true); //256
+    drawMenuButton("IJKL", 223, true); // 256
     M5.Speaker.tone(2000, 100);
   }
   else
@@ -320,7 +316,7 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
   else
   {
     display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }  
+  }
   display.drawString(getWindspeedString(windspeed, true), 1, yPos);
   display.setFont(&fonts::DejaVu18);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
@@ -328,28 +324,29 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
   display.drawString(evaluationString, 24, yPos + bigFontHeight + 2);
 }
 
-void drawGrid() {
+void drawGrid()
+{
   display.setFont(&fonts::DejaVu12);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  int fontOffsetY = (int)(display.fontHeight()/2.0f);
-  for (size_t i = 0; i <= 10; i+=2)
+  int fontOffsetY = (int)(display.fontHeight() / 2.0f);
+  for (size_t i = 0; i <= 10; i += 2)
   {
     int fontOffsetX = i < 10 ? display.fontWidth() : 2 * display.fontWidth();
-    display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + PLOT_HEIGHT - i * 10 );
+    display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + PLOT_HEIGHT - i * 10);
   }
 
-  for (size_t i = 0; i <= 10; i+=1)
+  for (size_t i = 0; i <= 10; i += 1)
   {
-    for (size_t j = 0; j < 1; j+=10)
+    for (size_t j = 0; j < 1; j += 10)
     {
       display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, 4, GRID_COLOR);
     }
   }
-  
+
   // top and bottom line
-  //display.drawLine(PLOT_OFFSET_X, PLOT_OFFSET_Y - 1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_OFFSET_Y - 1, GRID_COLOR);
-  //display.drawLine(PLOT_OFFSET_X, PLOT_HEIGHT+PLOT_OFFSET_Y+1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_HEIGHT+PLOT_OFFSET_Y+1, GRID_COLOR);
-} 
+  // display.drawLine(PLOT_OFFSET_X, PLOT_OFFSET_Y - 1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_OFFSET_Y - 1, GRID_COLOR);
+  // display.drawLine(PLOT_OFFSET_X, PLOT_HEIGHT+PLOT_OFFSET_Y+1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_HEIGHT+PLOT_OFFSET_Y+1, GRID_COLOR);
+}
 
 void drawWindspeedDisplayBarplot()
 {
@@ -362,7 +359,7 @@ void drawWindspeedDisplayBarplot()
     int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x - 1;
 
     display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
-    if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD*10)
+    if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD * 10)
     {
       display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_ALERT_COLOR);
     }
@@ -373,7 +370,8 @@ void drawWindspeedDisplayBarplot()
   }
 }
 
-void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
+void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
+{
 
   display.setFont(&fonts::DejaVu9);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
@@ -383,7 +381,7 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation) {
   {
     int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
     display.fillRect(x, y, WINDSPEED_DURATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_RED);
-    display.drawString(String(i+1), x+7, y);
+    display.drawString(String(i + 1), x + 7, y);
   }
 }
 
@@ -542,9 +540,9 @@ void appendLineToFile(fs::FS &fs, const char *path, const char *message)
   if (!file)
   {
     Serial.println("Failed to open file for appending");
-    writeLineToFile(fs, path, getLogFileHeader().c_str());
     return;
   }
+  
   if (!file.println(message))
   {
     Serial.println("Append failed");
@@ -589,6 +587,15 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
     }
     file = root.openNextFile();
   }
+}
+
+void logWindspeedToSDCard(float windspeed)
+{
+  if (!SD.exists(getLogFilePath().c_str()))
+  {
+    writeLineToFile(SD, getLogFilePath().c_str(), getLogFileHeader().c_str());
+  }
+  appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 }
 
 void setupSoundModule()
@@ -646,7 +653,8 @@ void setupDisplay()
   }
 }
 
-void setupServer() {
+void setupServer()
+{
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html"); });
@@ -659,7 +667,8 @@ void setupServer() {
   server.begin();
 }
 
-void setupLittleFS() {
+void setupLittleFS()
+{
   if (!LittleFS.begin())
   {
     Serial.println("An Error has occurred while mounting LittleFS");
@@ -667,7 +676,8 @@ void setupLittleFS() {
   }
 }
 
-void setupSDCard() {
+void setupSDCard()
+{
   if (!SD.begin(GPIO_NUM_4, SPI, 25000000))
   {
     Serial.println("Card Mount Failed");
@@ -702,10 +712,9 @@ void setupSDCard() {
   Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
   Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 
-  createDir(SD,"/logs");
+  createDir(SD, "/logs");
   listDir(SD, "/logs", 0);
 }
-
 
 void setup(void)
 {
@@ -731,7 +740,6 @@ void loop(void)
     lastCounter = counter;
     updateWindspeedArray(windspeed);
     WindspeedEvaluation evaluationResult = evaluateWindspeed();
-    appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 
     display.waitDisplay();
     drawWindspeedDisplayValues(windspeed, evaluationResult);
@@ -739,5 +747,7 @@ void loop(void)
     drawWindspeedEvaluationBars(evaluationResult);
     drawMenuButtons();
     display.display();
+
+    logWindspeedToSDCard(windspeed);
   }
 }
