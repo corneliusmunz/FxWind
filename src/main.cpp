@@ -438,19 +438,6 @@ String getWindspeedJson()
   return jsonString;
 }
 
-void createDir(fs::FS &fs, const char *path)
-{
-  Serial.printf("Creating Dir: %s\n", path);
-  if (fs.mkdir(path))
-  {
-    Serial.println("Dir created");
-  }
-  else
-  {
-    Serial.println("mkdir failed");
-  }
-}
-
 void readFile(fs::FS &fs, const char *path)
 {
   Serial.printf("Reading file: %s\n", path);
@@ -597,6 +584,61 @@ void logWindspeedToSDCard(float windspeed)
   }
   appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 }
+String printDirectory()
+{
+
+  String webpage;
+  File root = SD.open("/logs");
+
+  if (!root)
+  {
+    return String("");
+  }
+  if (!root.isDirectory())
+  {
+    return String("");
+  }
+  File file = root.openNextFile();
+
+  int i = 0;
+  while (file)
+  {
+    if (!file.isDirectory())
+    {
+      webpage += "<tr><td>" + String(file.name()) + "</td>";
+      // webpage += "<td>" + String(file.isDirectory() ? "Dir" : "File") + "</td>";
+      int bytes = file.size();
+      String fsize = "";
+      if (bytes < 1024)
+        fsize = String(bytes) + " B";
+      else if (bytes < (1024 * 1024))
+        fsize = String(bytes / 1024.0, 3) + " KB";
+      else if (bytes < (1024 * 1024 * 1024))
+        fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
+      else
+        fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
+      webpage += "<td>" + fsize + "</td>";
+      webpage += "<td>";
+      webpage += F("<FORM action='./downloads' method='get'>");
+      webpage += F("<button type='submit' name='filename'");
+      webpage += F("' value='");
+      webpage += String(file.name());
+      webpage += F("'>Download</button>");
+      webpage += "</td>";
+      webpage += "</tr>";
+
+// <form method="get" action="www.programiz.com/search">
+//     <input type="search" name="location" placeholder="Search.." />
+//     <input type="submit" value="Go" />
+// </form>
+    }
+    file = root.openNextFile();
+    i++;
+  }
+  file.close();
+  return webpage;
+}
+
 
 void setupSoundModule()
 {
@@ -653,6 +695,43 @@ void setupDisplay()
   }
 }
 
+void handleDownloadRequest(AsyncWebServerRequest *request)
+{
+
+  Serial.print("Method: ");
+  Serial.println(request->method());
+  
+  Serial.println("Params: ");
+  for (size_t i = 0; i < request->params(); i++)
+  {
+    Serial.println(request->getParam(i)->name());
+  }
+
+  Serial.println("Args: ");
+  for (size_t i = 0; i < request->args(); i++)
+  {
+    Serial.println(request->argName(i));
+  }
+  if (request->hasParam("filename", false)) 
+  { // Check for files: <input name="filename" />
+
+    String filename2 = request->arg("filename");
+    Serial.println(filename2);
+    Serial.println("getParam");
+    AsyncWebParameter* parameter = request->getParam(0);
+    Serial.println(parameter->name());
+    Serial.println(parameter->value());
+    String filename = request->getParam("filename")->value();
+    Serial.println("Download Filename: " + filename);
+    //AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
+    request->send(SD, "/logs/" + filename, String(), true);
+    return;
+  } else {
+    request->send(200, "text/html", printDirectory());
+  }
+}
+
+
 void setupServer()
 {
 
@@ -662,8 +741,15 @@ void setupServer()
             { request->send_P(200, "application/json", getWindspeedJson().c_str()); });
   server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", getWindspeedStatisticJson().c_str()); });
+  server.on("/downloadtest", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SD, "/logs/2024-09-27_windspeed.csv", String(), true); });
+  server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
+            { handleDownloadRequest(request);});
+  // server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           { request->send(200, "text/html", printDirectory()); });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+
   server.begin();
 }
 
