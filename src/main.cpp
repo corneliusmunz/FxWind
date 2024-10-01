@@ -438,6 +438,19 @@ String getWindspeedJson()
   return jsonString;
 }
 
+void createDir(fs::FS &fs, const char *path)
+{
+  Serial.printf("Creating Dir: %s\n", path);
+  if (fs.mkdir(path))
+  {
+    Serial.println("Dir created");
+  }
+  else
+  {
+    Serial.println("mkdir failed");
+  }
+}
+
 void readFile(fs::FS &fs, const char *path)
 {
   Serial.printf("Reading file: %s\n", path);
@@ -537,45 +550,6 @@ void appendLineToFile(fs::FS &fs, const char *path, const char *message)
   file.close();
 }
 
-void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
-{
-  Serial.printf("Listing directory: %s\n", dirname);
-
-  File root = fs.open(dirname);
-  if (!root)
-  {
-    Serial.println("Failed to open directory");
-    return;
-  }
-  if (!root.isDirectory())
-  {
-    Serial.println("Not a directory");
-    return;
-  }
-
-  File file = root.openNextFile();
-  while (file)
-  {
-    if (file.isDirectory())
-    {
-      Serial.print("  DIR : ");
-      Serial.println(file.name());
-      if (levels)
-      {
-        listDir(fs, file.name(), levels - 1);
-      }
-    }
-    else
-    {
-      Serial.print("  FILE: ");
-      Serial.print(file.name());
-      Serial.print("  SIZE: ");
-      Serial.println(file.size());
-    }
-    file = root.openNextFile();
-  }
-}
-
 void logWindspeedToSDCard(float windspeed)
 {
   if (!SD.exists(getLogFilePath().c_str()))
@@ -584,6 +558,57 @@ void logWindspeedToSDCard(float windspeed)
   }
   appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 }
+
+String getDownloadFilesJson() {
+
+    JsonDocument jsonDocument;
+
+    File logDirectory = SD.open("/logs");
+
+    if (!logDirectory)
+    {
+      return String();
+    }
+    if (!logDirectory.isDirectory())
+    {
+      return String();
+    }
+
+    File file = logDirectory.openNextFile();
+
+    while (file)
+    {
+      if (!file.isDirectory())
+      {
+        int bytes = file.size();
+        String fsize = "";
+        if (bytes < 1024)
+          fsize = String(bytes) + " B";
+        else if (bytes < (1024 * 1024))
+          fsize = String(bytes / 1024.0, 3) + " KB";
+        else if (bytes < (1024 * 1024 * 1024))
+          fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
+        else
+          fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
+
+        JsonObject arrayDocument = jsonDocument.add<JsonObject>();
+        arrayDocument["filename"] = String(file.name());
+        arrayDocument["filesize"] = fsize;
+        arrayDocument["downloadUrl"] = "./downloads?filename=" + String(file.name());
+      }
+      file.close();
+      file = logDirectory.openNextFile();
+    }
+
+    file.close();
+    String jsonString;
+    jsonDocument.shrinkToFit();
+    serializeJson(jsonDocument, jsonString);
+
+    return jsonString;
+  
+}
+
 String printDirectory()
 {
 
@@ -626,11 +651,6 @@ String printDirectory()
       webpage += F("'>Download</button>");
       webpage += "</td>";
       webpage += "</tr>";
-
-// <form method="get" action="www.programiz.com/search">
-//     <input type="search" name="location" placeholder="Search.." />
-//     <input type="submit" value="Go" />
-// </form>
     }
     file = root.openNextFile();
     i++;
@@ -745,6 +765,8 @@ void setupServer()
             { request->send(SD, "/logs/2024-09-27_windspeed.csv", String(), true); });
   server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
             { handleDownloadRequest(request);});
+  server.on("/downloadsjson", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "application/json", getDownloadFilesJson().c_str()); });
   // server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
   //           { request->send(200, "text/html", printDirectory()); });
 
@@ -799,7 +821,6 @@ void setupSDCard()
   Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 
   createDir(SD, "/logs");
-  listDir(SD, "/logs", 0);
 }
 
 void setup(void)
