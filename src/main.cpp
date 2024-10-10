@@ -34,15 +34,12 @@
 #define GRID_COLOR TFT_DARKGREY
 #define PLOT_BAR_DEFAULT_COLOR TFT_GREEN
 #define PLOT_BAR_ALERT_COLOR TFT_RED
-static int windspeedHistoryArray[EVALUATION_RANGE];
 
 // global variables
 M5GFX display;
 WiFiUDP Udp;
 AsyncWebServer server(80);
 WindSpeed windSpeed(WINDSPEED_PIN, 300, 4, 20);
-long counter;
-long lastCounter;
 unsigned long lastMillis;
 const char ssid[] = "FaMu";
 const char pass[] = "27129515464951176513";
@@ -184,10 +181,10 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
   {
     display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
   }
-  display.drawString(windSpeed.getWindspeedString(windspeed, true), 1, yPos);
+  display.drawString(windSpeed.getWindspeedString(true), 1, yPos);
   display.setFont(&fonts::DejaVu18);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  String evaluationString = windSpeed.getWindspeedEvaluationString(windspeedEvaluation);
+  String evaluationString = windSpeed.getWindspeedEvaluationString();
   display.drawString(evaluationString, 24, yPos + bigFontHeight + 2);
 }
 
@@ -226,13 +223,13 @@ void drawWindspeedDisplayBarplot()
     int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x - 1;
 
     display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
-    if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD * 10)
+    if (windSpeed.getWindSpeedHistoryArrayElement(x) >= WINDSPEED_THRESHOLD * 10)
     {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_ALERT_COLOR);
+      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_ALERT_COLOR);
     }
     else
     {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_DEFAULT_COLOR);
+      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_DEFAULT_COLOR);
     }
   }
 }
@@ -254,11 +251,11 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
 
 String getWindspeedStatisticJson()
 {
-  WindspeedEvaluation windspeedEvaluation = windSpeed.evaluateWindspeed();
+  WindspeedEvaluation windspeedEvaluation = windSpeed.getWindspeedEvaluation();
 
   JsonDocument jsonDocument;
 
-  jsonDocument["currentWindspeed"] = windspeedHistoryArray[0];
+  jsonDocument["currentWindspeed"] = windSpeed.getCurrentWindspeed();
   jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
   jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
   jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
@@ -286,26 +283,6 @@ String getWindspeedStatisticJson()
   serializeJson(jsonDocument, jsonString);
   return jsonString;
 }
-
-String getWindspeedJson()
-{
-  JsonDocument jsonDocument;
-
-  for (size_t i = 0; i < EVALUATION_RANGE; i++)
-  {
-    JsonObject arrayDocument = jsonDocument.add<JsonObject>();
-    arrayDocument["x"] = i;
-    arrayDocument["y"] = windspeedHistoryArray[EVALUATION_RANGE - 1 - i] / 10.0f;
-  }
-
-  String jsonString;
-  jsonDocument.shrinkToFit();
-  serializeJson(jsonDocument, jsonString);
-
-  return jsonString;
-}
-
-
 
 String getDownloadFilesJson() {
 
@@ -505,7 +482,7 @@ void setupServer()
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html"); });
   server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "application/json", getWindspeedJson().c_str()); });
+            { request->send_P(200, "application/json", windSpeed.getWindspeedJson().c_str()); });
   server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", getWindspeedStatisticJson().c_str()); });
   server.on("/downloadtest", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -531,49 +508,12 @@ void setupLittleFS()
   }
 }
 
-void setupSDCard()
-{
-  if (!SD.begin(GPIO_NUM_4, SPI, 25000000))
-  {
-    Serial.println("Card Mount Failed");
-    return;
-  }
-  uint8_t cardType = SD.cardType();
 
-  if (cardType == CARD_NONE)
-  {
-    Serial.println("No SD card attached");
-    return;
-  }
-
-  Serial.print("SD Card Type: ");
-  if (cardType == CARD_MMC)
-  {
-    Serial.println("MMC");
-  }
-  else if (cardType == CARD_SD)
-  {
-    Serial.println("SDSC");
-  }
-  else if (cardType == CARD_SDHC)
-  {
-    Serial.println("SDHC");
-  }
-  else
-  {
-    Serial.println("UNKNOWN");
-  }
-  Serial.printf("SD Card Size: %lluMB\n", SD.cardSize() / (1024 * 1024));
-  Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
-  Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
-
-  windSpeed.createDir(SD, "/logs");
-}
 
 void setup(void)
 {
   M5.begin();
-  setupSDCard();
+  windSpeed.setupSDCard();
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
@@ -589,21 +529,18 @@ void loop(void)
   if (currentMillis - lastMillis >= SAMPLE_RATE)
   {
     M5.update();
-    windSpeed.calculateWindspeed();
-    float windspeed = windSpeed.getCurrentWindspeed();
-    WindspeedEvaluation evaluationResult = windSpeed.evaluateWindspeed();
+    windSpeed.calculateWindspeed(true, true);
+    // float windspeed = windSpeed.getCurrentWindspeed();
     lastMillis = currentMillis;
-    lastCounter = counter;
-    Serial.print("windspeed: ");
-    Serial.println(windspeed, DEC);
-    Serial.println(windSpeed.getWindspeedEvaluationString(evaluationResult));
-    // display.waitDisplay();
-    // drawWindspeedDisplayValues(windspeed, evaluationResult);
-    // drawWindspeedDisplayBarplot();
-    // drawWindspeedEvaluationBars(evaluationResult);
-    // drawMenuButtons();
-    // display.display();
+    // Serial.print("windspeed: ");
+    // Serial.println(windspeed, DEC);
+    // Serial.println(windSpeed.getWindspeedEvaluationString());
+    display.waitDisplay();
+    drawWindspeedDisplayValues(windSpeed.getCurrentWindspeed(), windSpeed.getWindspeedEvaluation());
+    drawWindspeedDisplayBarplot();
+    drawWindspeedEvaluationBars(windSpeed.getWindspeedEvaluation());
+    drawMenuButtons();
+    display.display();
 
-    //logWindspeedToSDCard(windspeed);
   }
 }

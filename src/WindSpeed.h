@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include <TimeLib.h>
 #include <SD.h>
+#include <ArduinoJson.h>
 
 // structs, enums
 struct WindspeedEvaluation
@@ -20,15 +21,31 @@ class WindSpeed
 public:
     WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20);
     void setupInterruptCallback(void (*externalInterruptCallback)(void));
+    void setupSDCard();
     void interruptCallback();
-    void calculateWindspeed();
+    void calculateWindspeed(bool evaluate = true, bool log = false);
     float getCurrentWindspeed();
-    void  timerCallback();
+    WindspeedEvaluation getWindspeedEvaluation();
+    String getWindspeedJson();
+    String getWindspeedEvaluationString();
+    String getWindspeedString(bool addUnitSymbol = false);
+    int getWindSpeedHistoryArrayElement(int i);
+
+private:
+    uint8_t _sensorPin;
+    uint16_t _evaluationRange = 300;
+    uint16_t _windspeedThreshold = 8;
+    uint16_t _windspeedDurationRange = 20;
+    uint16_t _sampleRate = 1000;
+    uint32_t _counter = 0;
+    uint32_t _lastCounter = 0;
+    WindspeedEvaluation _windspeedEvaluation;
+    int _windspeedHistoryArray[300];
+    void logWindspeedToSDCard(fs::FS &fs);
+    void evaluateWindspeed();
     void updateWindspeedArray(float currentWindspeed);
     String getTimestampString();
     String getWindspeedEvaluationSingleString(float windspeedValue);
-    String getWindspeedEvaluationString(WindspeedEvaluation windspeedEvaluation);
-    String getWindspeedString(float windspeedValue, bool addUnitSymbol);
     String getLogCsvRow(float windspeedValue, char separationChar = ',');
     String getLogFilePath();
     String getLogFileHeader();
@@ -38,17 +55,6 @@ public:
     void writeFile(fs::FS &fs, const char *path, const char *message);
     void readFile(fs::FS &fs, const char *path);
     void createDir(fs::FS &fs, const char *path);
-    void logWindspeedToSDCard(fs::FS &fs, float windspeed);
-    WindspeedEvaluation evaluateWindspeed();
-
-        private : uint8_t _sensorPin;
-    uint16_t _evaluationRange = 300;
-    uint16_t _windspeedThreshold = 8;
-    uint16_t _windspeedDurationRange = 20;
-    uint16_t _sampleRate = 1000;
-    uint32_t _counter = 0;
-    uint32_t _lastCounter = 0;
-    int _windspeedHistoryArray[300];
 };
 
 #endif
