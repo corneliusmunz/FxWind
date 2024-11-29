@@ -36,13 +36,13 @@
 #define PLOT_BAR_ALERT_COLOR TFT_RED
 
 // global variables
+WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
 M5GFX display;
 WiFiUDP Udp;
 AsyncWebServer server(80);
-WindSpeed windSpeed(WINDSPEED_PIN, 300, 4, 20);
 unsigned long lastMillis;
-const char ssid[] = "FaMu";
-const char pass[] = "27129515464951176513";
+const char ssid[] = "";
+const char pass[] = "";
 static const char ntpServerName[] = "de.pool.ntp.org";
 unsigned int localPort = 8888;
 const int timeZone = 0;
@@ -249,40 +249,6 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
   }
 }
 
-String getWindspeedStatisticJson()
-{
-  WindspeedEvaluation windspeedEvaluation = windSpeed.getWindspeedEvaluation();
-
-  JsonDocument jsonDocument;
-
-  jsonDocument["currentWindspeed"] = windSpeed.getCurrentWindspeed();
-  jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
-  jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
-  jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
-  jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
-
-  JsonArray evaluationArray = jsonDocument["evaluationArray"].to<JsonArray>();
-
-  // if (windspeedEvaluation.NumberOfExceededRanges > 0)
-  // for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
-  // {
-  //   /* code */
-  // }
-
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-  evaluationArray.add(1);
-  evaluationArray.add(1);
-  evaluationArray.add(1);
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-
-  String jsonString;
-  jsonDocument.shrinkToFit();
-  serializeJson(jsonDocument, jsonString);
-  return jsonString;
-}
 
 String getDownloadFilesJson() {
 
@@ -478,13 +444,12 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
 
 void setupServer()
 {
-
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html"); });
   server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", windSpeed.getWindspeedJson().c_str()); });
   server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "application/json", getWindspeedStatisticJson().c_str()); });
+            { request->send_P(200, "application/json", windSpeed.getWindspeedEvaluationJson().c_str()); });
   server.on("/downloadtest", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SD, "/logs/2024-09-27_windspeed.csv", String(), true); });
   server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)

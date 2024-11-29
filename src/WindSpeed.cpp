@@ -148,7 +148,7 @@ void WindSpeed::evaluateWindspeed()
 
 }
 
-String WindSpeed::getWindspeedString(bool addUnitSymbol)
+String WindSpeed::getWindspeedString(bool addUnitSymbol = false)
 {
     char stringbuffer[100];
     if (addUnitSymbol)
@@ -206,6 +206,42 @@ String WindSpeed::getWindspeedJson()
     jsonDocument.shrinkToFit();
     serializeJson(jsonDocument, jsonString);
 
+    return jsonString;
+}
+
+String WindSpeed::getWindspeedEvaluationJson()
+{
+    WindspeedEvaluation windspeedEvaluation = getWindspeedEvaluation();
+
+    JsonDocument jsonDocument;
+
+    jsonDocument["currentWindspeed"] = getCurrentWindspeed();
+    jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
+    jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
+    jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
+    jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
+
+    JsonArray evaluationArray = jsonDocument["evaluationArray"].to<JsonArray>();
+
+    // if (windspeedEvaluation.NumberOfExceededRanges > 0)
+    // for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
+    // {
+    //     for
+    //     RangeStartIndex[i]
+    // }
+    
+    evaluationArray.add(0);
+    evaluationArray.add(0);
+    evaluationArray.add(0);
+    evaluationArray.add(1);
+    evaluationArray.add(1);
+    evaluationArray.add(1);
+    evaluationArray.add(0);
+    evaluationArray.add(0);
+
+    String jsonString;
+    jsonDocument.shrinkToFit();
+    serializeJson(jsonDocument, jsonString);
     return jsonString;
 }
 

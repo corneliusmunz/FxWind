@@ -27,6 +27,7 @@ public:
     float getCurrentWindspeed();
     WindspeedEvaluation getWindspeedEvaluation();
     String getWindspeedJson();
+    String getWindspeedEvaluationJson();
     String getWindspeedEvaluationString();
     String getWindspeedString(bool addUnitSymbol = false);
     int getWindSpeedHistoryArrayElement(int i);
