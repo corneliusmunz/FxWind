@@ -22,7 +22,7 @@
 #define PLOT_OFFSET_X 20
 #define PLOT_OFFSET_Y 5
 #define PLOT_HEIGHT 100
-#define EVALUATION_BAR_HEIGHT 10
+#define EVALUATION_BAR_HEIGHT 20
 #define BUTTON_HEIGHT 16
 #define TXT_DEFAULT_COLOR TFT_WHITE
 #define TXT_ALERT_COLOR TFT_RED
@@ -170,7 +170,7 @@ void drawMenuButtons()
 
 void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
 {
-  int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 8;
+  int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 12;
   display.setFont(&fonts::DejaVu72);
   int bigFontHeight = display.fontHeight();
   if (windspeed > WINDSPEED_THRESHOLD)
@@ -185,7 +185,7 @@ void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEv
   display.setFont(&fonts::DejaVu18);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
   String evaluationString = windSpeed.getWindspeedEvaluationString();
-  display.drawString(evaluationString, 24, yPos + bigFontHeight + 2);
+  display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
 }
 
 void drawGrid()
@@ -237,7 +237,7 @@ void drawWindspeedDisplayBarplot()
 void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
 {
 
-  display.setFont(&fonts::DejaVu9);
+  display.setFont(&fonts::DejaVu12);
   display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
   int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
   display.fillRect(PLOT_OFFSET_X - 1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
@@ -245,7 +245,7 @@ void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
   {
     int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
     display.fillRect(x, y, WINDSPEED_DURATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_RED);
-    display.drawString(String(i + 1), x + 7, y);
+    display.drawString(String(i + 1), x + 7, y+4);
   }
 }
 
@@ -495,16 +495,12 @@ void loop(void)
   {
     M5.update();
     windSpeed.calculateWindspeed(true, true);
-    // float windspeed = windSpeed.getCurrentWindspeed();
     lastMillis = currentMillis;
-    // Serial.print("windspeed: ");
-    // Serial.println(windspeed, DEC);
-    // Serial.println(windSpeed.getWindspeedEvaluationString());
     display.waitDisplay();
     drawWindspeedDisplayValues(windSpeed.getCurrentWindspeed(), windSpeed.getWindspeedEvaluation());
     drawWindspeedDisplayBarplot();
     drawWindspeedEvaluationBars(windSpeed.getWindspeedEvaluation());
-    drawMenuButtons();
+    //drawMenuButtons();
     display.display();
 
   }

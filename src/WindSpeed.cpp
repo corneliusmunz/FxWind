@@ -148,7 +148,7 @@ void WindSpeed::evaluateWindspeed()
 
 }
 
-String WindSpeed::getWindspeedString(bool addUnitSymbol = false)
+String WindSpeed::getWindspeedString(bool addUnitSymbol)
 {
     char stringbuffer[100];
     if (addUnitSymbol)
