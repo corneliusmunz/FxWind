@@ -31,3 +31,8 @@ Wind measurement tool for F3x soaring competitions according to FAI rules
 * Use WPS for Wifi connection
 * Different displays (number and statistic only, pure plot chart, mixed chart)
 * Settings page (time, threshold, sound volume, unit, wps button)
+
+
+## Setup LittleFS Filesystem
+
+For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-code-platformio-littlefs/
