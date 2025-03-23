@@ -2,9 +2,8 @@
 #include <SD.h>
 #include <M5GFX.h>
 #include <M5Unified.h>
+#include <WiFiManager.h>
 #include <TimeLib.h>
-#include <WiFi.h>
-#include <WiFiUdp.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
@@ -34,6 +33,7 @@
 #define GRID_COLOR TFT_DARKGREY
 #define PLOT_BAR_DEFAULT_COLOR TFT_GREEN
 #define PLOT_BAR_ALERT_COLOR TFT_RED
+#define NTP_SYNC_INTERVAL 600
 
 // global variables
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
@@ -41,8 +41,7 @@ M5GFX display;
 WiFiUDP Udp;
 AsyncWebServer server(80);
 unsigned long lastMillis;
-const char ssid[] = "";
-const char pass[] = "";
+static const char *hostname = "f3xwind";
 static const char ntpServerName[] = "de.pool.ntp.org";
 unsigned int localPort = 8888;
 const int timeZone = 0;
@@ -362,12 +361,20 @@ void setupSoundModule()
 
 void setupWifi()
 {
-  WiFi.begin(ssid, pass);
+  WiFi.mode(WIFI_STA);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
+  WiFiManager wm;
+  wm.setHostname(hostname);
+  bool res;
+
+  //wm.resetSettings();
+
+  wm.autoConnect("F3XWind");
+
+  if (!res) {
+    Serial.println("Failed to connect");
+  } else {
+    Serial.println("Connected successfull");
   }
 
   Serial.print("IP number assigned by DHCP is ");
@@ -380,7 +387,7 @@ void setupNtpTimeSyncProvider()
   Udp.begin(localPort);
   Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
-  setSyncInterval(300);
+  setSyncInterval(NTP_SYNC_INTERVAL);
 }
 
 void setupWindspeedIO()
@@ -461,6 +468,7 @@ void setupServer()
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
+  Serial.println("Server begin");
   server.begin();
 }
 
