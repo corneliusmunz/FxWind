@@ -34,8 +34,6 @@ unsigned int localPort = 8888;
 const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
-bool isAlarmTriggered = false;
-bool isAlarmReset = false;
 
 
 
@@ -243,6 +241,10 @@ void playSound(int duration = 2000) {
   M5.Speaker.tone(440, duration);
 }
 
+void stopSound()
+{
+  M5.Speaker.stop();
+}
 
 void setupSoundModule()
 {
@@ -285,13 +287,7 @@ void setupNtpTimeSyncProvider()
 }
 
 void evaluationCallback() {
-  if (isAlarmTriggered == false) {
-    isAlarmTriggered = true;
-  }
-
-  if (isAlarmTriggered && !isAlarmReset) {
-    playSound(500);
-  }
+    playSound(5000);
 }
 
 void setupWindspeedIO()
@@ -367,7 +363,7 @@ void loop(void)
       Serial.printf("%s", state_name[t.state]);
       if (t.state == 5)
       {
-        isAlarmReset = true;
+        stopSound();
       }
 
       if (t.state != 5)

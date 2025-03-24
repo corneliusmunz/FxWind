@@ -38,9 +38,11 @@ private:
     uint16_t _evaluationRange = 300;
     uint16_t _windspeedThreshold = 8;
     uint16_t _windspeedDurationRange = 20;
+    uint16_t _numberOfRangesThreshold = 3;
     uint16_t _sampleRate = 1000;
     uint32_t _counter = 0;
     uint32_t _lastCounter = 0;
+    bool _isCallbackAlreadySent = false;
     std::function<void(void)> _evaluationCallback = nullptr;
     WindspeedEvaluation _windspeedEvaluation;
     int _windspeedHistoryArray[300];

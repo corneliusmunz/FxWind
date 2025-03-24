@@ -156,10 +156,16 @@ void WindSpeed::evaluateWindspeed()
         _windspeedEvaluation.RangeStartIndex[i] = exceededRangesIndex[i];
     }
 
-    if (exceededRangesCounter >= 3 && _evaluationCallback != nullptr)
-    {
-        _evaluationCallback();
+    if (exceededRangesCounter < _numberOfRangesThreshold) {
+        Serial.println("Reset isCallbackAlreadySent");
+        _isCallbackAlreadySent = false;
     }
+
+        if (exceededRangesCounter >= _numberOfRangesThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
+        {
+            _isCallbackAlreadySent = true;
+            _evaluationCallback();
+        }
 }
 
 String WindSpeed::getWindspeedString(bool addUnitSymbol)
