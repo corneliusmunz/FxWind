@@ -21,7 +21,7 @@ class WindSpeed
 public:
     WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20);
     void setupInterruptCallback(void (*externalInterruptCallback)(void));
-    void setupSDCard();
+    void setup();
     void interruptCallback();
     void calculateWindspeed(bool evaluate = true, bool log = false);
     float getCurrentWindspeed();
@@ -42,6 +42,7 @@ private:
     uint32_t _lastCounter = 0;
     WindspeedEvaluation _windspeedEvaluation;
     int _windspeedHistoryArray[300];
+    void setupSDCard();
     void logWindspeedToSDCard(fs::FS &fs);
     void evaluateWindspeed();
     void updateWindspeedArray(float currentWindspeed);

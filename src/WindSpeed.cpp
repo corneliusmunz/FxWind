@@ -9,6 +9,11 @@ WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t winds
     _windspeedDurationRange = windspeedDurationRange;
 }
 
+void WindSpeed::setup() 
+{
+    setupSDCard();
+}
+
 void WindSpeed::setupSDCard()
 {
     if (!SD.begin(GPIO_NUM_4, SPI, 25000000))

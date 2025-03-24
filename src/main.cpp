@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include "WindSpeed.h"
+#include "WindSpeedDisplay.h"
 
 
 // constants
@@ -17,27 +18,12 @@
 #define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
 
-
-#define PLOT_OFFSET_X 20
-#define PLOT_OFFSET_Y 5
-#define PLOT_HEIGHT 100
-#define EVALUATION_BAR_HEIGHT 20
-#define BUTTON_HEIGHT 16
-#define TXT_DEFAULT_COLOR TFT_WHITE
-#define TXT_ALERT_COLOR TFT_RED
-#define TXT_DEFAULT_BACKGROUND_COLOR TFT_BLACK
-#define TXT_ALERT_BACKGROUND_COLOR TFT_RED
-#define TXT_BUTTON_PRESSED_COLOR TFT_NAVY
-#define RECTANGLE_BUTTON_DEFAULT_COLOR TFT_WHITE
-#define RECTANGLE_BUTTON_PRESSED_COLOR TFT_NAVY
-#define GRID_COLOR TFT_DARKGREY
-#define PLOT_BAR_DEFAULT_COLOR TFT_GREEN
-#define PLOT_BAR_ALERT_COLOR TFT_RED
 #define NTP_SYNC_INTERVAL 600
 
 // global variables
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
-M5GFX display;
+WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
+
 WiFiUDP Udp;
 AsyncWebServer server(80);
 unsigned long lastMillis;
@@ -111,143 +97,6 @@ time_t getNtpTime()
   Serial.println("No NTP Response :-(");
   return 0; // return 0 if unable to get the time
 }
-
-void drawMenuButton(String label, int xPos, bool isPressed = false)
-{
-  display.setFont(&fonts::DejaVu12);
-  int yPos = display.height() - BUTTON_HEIGHT;
-  if (isPressed)
-  {
-    display.setColor(RECTANGLE_BUTTON_PRESSED_COLOR);
-    display.setTextColor(TXT_BUTTON_PRESSED_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  else
-  {
-    display.setColor(RECTANGLE_BUTTON_DEFAULT_COLOR);
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  display.drawRect(xPos, yPos, 64, BUTTON_HEIGHT + 1);
-  display.drawCenterString(label, xPos + 33, yPos + 5);
-}
-
-void drawMenuButtons()
-{
-
-  if (M5.BtnA.isHolding())
-  {
-    drawMenuButton("ABCD", 31, true); // 64
-    if (!M5.Speaker.isPlaying())
-    {
-      M5.Speaker.tone(1000, 500);
-    }
-  }
-  else
-  {
-    drawMenuButton("ABCD", 31, false);
-  }
-
-  if (M5.BtnB.isPressed())
-  {
-    drawMenuButton("EFGH", 127, true); // 160
-    M5.Speaker.tone(500, 100);
-  }
-  else
-  {
-    drawMenuButton("EFGH", 127, false);
-  }
-
-  if (M5.BtnC.wasPressed())
-  {
-    drawMenuButton("IJKL", 223, true); // 256
-    M5.Speaker.tone(2000, 100);
-  }
-  else
-  {
-    drawMenuButton("IJKL", 223, false);
-  }
-}
-
-void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
-{
-  int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 12;
-  display.setFont(&fonts::DejaVu72);
-  int bigFontHeight = display.fontHeight();
-  if (windspeed > WINDSPEED_THRESHOLD)
-  {
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-  }
-  else
-  {
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  display.drawString(windSpeed.getWindspeedString(true), 1, yPos);
-  display.setFont(&fonts::DejaVu18);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  String evaluationString = windSpeed.getWindspeedEvaluationString();
-  display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
-}
-
-void drawGrid()
-{
-  display.setFont(&fonts::DejaVu12);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  int fontOffsetY = (int)(display.fontHeight() / 2.0f);
-  for (size_t i = 0; i <= 10; i += 2)
-  {
-    int fontOffsetX = i < 10 ? display.fontWidth() : 2 * display.fontWidth();
-    display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + PLOT_HEIGHT - i * 10);
-  }
-
-  for (size_t i = 0; i <= 10; i += 1)
-  {
-    for (size_t j = 0; j < 1; j += 10)
-    {
-      display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, 4, GRID_COLOR);
-    }
-  }
-
-  // top and bottom line
-  // display.drawLine(PLOT_OFFSET_X, PLOT_OFFSET_Y - 1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_OFFSET_Y - 1, GRID_COLOR);
-  // display.drawLine(PLOT_OFFSET_X, PLOT_HEIGHT+PLOT_OFFSET_Y+1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_HEIGHT+PLOT_OFFSET_Y+1, GRID_COLOR);
-}
-
-void drawWindspeedDisplayBarplot()
-{
-  int h = PLOT_HEIGHT;
-
-  drawGrid();
-
-  for (int x = 0; x < EVALUATION_RANGE; x++)
-  {
-    int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x - 1;
-
-    display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
-    if (windSpeed.getWindSpeedHistoryArrayElement(x) >= WINDSPEED_THRESHOLD * 10)
-    {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_ALERT_COLOR);
-    }
-    else
-    {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), min(windSpeed.getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_DEFAULT_COLOR);
-    }
-  }
-}
-
-void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
-{
-
-  display.setFont(&fonts::DejaVu12);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-  int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
-  display.fillRect(PLOT_OFFSET_X - 1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
-  for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
-  {
-    int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
-    display.fillRect(x, y, WINDSPEED_DURATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_RED);
-    display.drawString(String(i + 1), x + 7, y+4);
-  }
-}
-
 
 String getDownloadFilesJson() {
 
@@ -363,13 +212,13 @@ void setupWifi()
 {
   WiFi.mode(WIFI_STA);
 
-  WiFiManager wm;
-  wm.setHostname(hostname);
+  WiFiManager wifiManager;
+  wifiManager.setHostname(hostname);
   bool res;
 
-  //wm.resetSettings();
+  //wifiManager.resetSettings();
 
-  wm.autoConnect("F3XWind");
+  wifiManager.autoConnect("F3XWind");
 
   if (!res) {
     Serial.println("Failed to connect");
@@ -395,22 +244,7 @@ void setupWindspeedIO()
   windSpeed.setupInterruptCallback(interruptCallback);
 }
 
-void setupDisplay()
-{
-  display.init();
-  display.startWrite();
-  display.fillScreen(TFT_BLACK);
-  display.endWrite();
 
-  if (display.isEPD())
-  {
-    display.setEpdMode(epd_mode_t::epd_fastest);
-  }
-  if (display.width() < display.height())
-  {
-    display.setRotation(display.getRotation() ^ 1);
-  }
-}
 
 void handleDownloadRequest(AsyncWebServerRequest *request)
 {
@@ -486,14 +320,14 @@ void setupLittleFS()
 void setup(void)
 {
   M5.begin();
-  windSpeed.setupSDCard();
+  windSpeed.setup();
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
   setupLittleFS();
   setupServer();
   setupSoundModule();
-  setupDisplay();
+  windSpeedDisplay.setup();
 }
 
 void loop(void)
@@ -504,12 +338,6 @@ void loop(void)
     M5.update();
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
-    display.waitDisplay();
-    drawWindspeedDisplayValues(windSpeed.getCurrentWindspeed(), windSpeed.getWindspeedEvaluation());
-    drawWindspeedDisplayBarplot();
-    drawWindspeedEvaluationBars(windSpeed.getWindspeedEvaluation());
-    //drawMenuButtons();
-    display.display();
-
+    windSpeedDisplay.draw();
   }
 }
