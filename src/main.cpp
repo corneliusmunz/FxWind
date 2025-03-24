@@ -20,6 +20,7 @@
 
 #define NTP_SYNC_INTERVAL 600
 
+
 // global variables
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
@@ -33,6 +34,8 @@ unsigned int localPort = 8888;
 const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
+bool isAlarmTriggered = false;
+bool isAlarmReset = false;
 
 
 
@@ -198,12 +201,54 @@ String printDirectory()
   return webpage;
 }
 
+void handleDownloadRequest(AsyncWebServerRequest *request)
+{
+
+  Serial.print("Method: ");
+  Serial.println(request->method());
+
+  Serial.println("Params: ");
+  for (size_t i = 0; i < request->params(); i++)
+  {
+    Serial.println(request->getParam(i)->name());
+  }
+
+  Serial.println("Args: ");
+  for (size_t i = 0; i < request->args(); i++)
+  {
+    Serial.println(request->argName(i));
+  }
+  if (request->hasParam("filename", false))
+  { // Check for files: <input name="filename" />
+
+    String filename2 = request->arg("filename");
+    Serial.println(filename2);
+    Serial.println("getParam");
+    AsyncWebParameter *parameter = request->getParam(0);
+    Serial.println(parameter->name());
+    Serial.println(parameter->value());
+    String filename = request->getParam("filename")->value();
+    Serial.println("Download Filename: " + filename);
+    // AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
+    request->send(SD, "/logs/" + filename, String(), true);
+    return;
+  }
+  else
+  {
+    request->send(200, "text/html", printDirectory());
+  }
+}
+
+void playSound(int duration = 2000) {
+  M5.Speaker.tone(440, duration);
+}
+
 
 void setupSoundModule()
 {
-  auto cfg = M5.config();
-  cfg.external_speaker.atomic_spk = true;
-  cfg.external_speaker.module_display = true;
+  auto config = M5.config();
+  config.external_speaker.atomic_spk = true;
+  config.external_speaker.module_display = true;
   M5.Speaker.setVolume(128);
   M5.Speaker.begin();
 }
@@ -239,49 +284,21 @@ void setupNtpTimeSyncProvider()
   setSyncInterval(NTP_SYNC_INTERVAL);
 }
 
+void evaluationCallback() {
+  if (isAlarmTriggered == false) {
+    isAlarmTriggered = true;
+  }
+
+  if (isAlarmTriggered && !isAlarmReset) {
+    playSound(500);
+  }
+}
+
 void setupWindspeedIO()
 {
   windSpeed.setupInterruptCallback(interruptCallback);
+  windSpeed.setupEvaluationCallback(&evaluationCallback);
 }
-
-
-
-void handleDownloadRequest(AsyncWebServerRequest *request)
-{
-
-  Serial.print("Method: ");
-  Serial.println(request->method());
-  
-  Serial.println("Params: ");
-  for (size_t i = 0; i < request->params(); i++)
-  {
-    Serial.println(request->getParam(i)->name());
-  }
-
-  Serial.println("Args: ");
-  for (size_t i = 0; i < request->args(); i++)
-  {
-    Serial.println(request->argName(i));
-  }
-  if (request->hasParam("filename", false)) 
-  { // Check for files: <input name="filename" />
-
-    String filename2 = request->arg("filename");
-    Serial.println(filename2);
-    Serial.println("getParam");
-    AsyncWebParameter* parameter = request->getParam(0);
-    Serial.println(parameter->name());
-    Serial.println(parameter->value());
-    String filename = request->getParam("filename")->value();
-    Serial.println("Download Filename: " + filename);
-    //AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
-    request->send(SD, "/logs/" + filename, String(), true);
-    return;
-  } else {
-    request->send(200, "text/html", printDirectory());
-  }
-}
-
 
 void setupServer()
 {
@@ -328,10 +345,39 @@ void setup(void)
   setupServer();
   setupSoundModule();
   windSpeedDisplay.setup();
+  
 }
+
 
 void loop(void)
 {
+  M5.delay(1);
+  M5.update();
+
+  auto count = M5.Touch.getCount();
+  if (count != 0)
+  {
+    static m5::touch_state_t prev_state;
+    auto t = M5.Touch.getDetail();
+    if (prev_state != t.state)
+    {
+      prev_state = t.state;
+      static constexpr const char *state_name[16] =
+          {"none", "touch", "touch_end", "touch_begin", "___", "hold", "hold_end", "hold_begin", "___", "flick", "flick_end", "flick_begin", "___", "drag", "drag_end", "drag_begin"};
+      Serial.printf("%s", state_name[t.state]);
+      if (t.state == 5)
+      {
+        isAlarmReset = true;
+      }
+
+      if (t.state != 5)
+      {
+        //M5.Speaker.stop();
+      }
+    }
+
+  }
+
   long currentMillis = millis();
   if (currentMillis - lastMillis >= SAMPLE_RATE)
   {

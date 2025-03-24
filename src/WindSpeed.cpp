@@ -58,6 +58,11 @@ void WindSpeed::setupInterruptCallback(void (*externalInterruptCallback)(void))
     attachInterrupt(digitalPinToInterrupt(_sensorPin), externalInterruptCallback, RISING);
 }
 
+void WindSpeed::setupEvaluationCallback(std::function<void(void)> evaluationCallback)
+{
+    _evaluationCallback = evaluationCallback;
+}
+
 // interrupt callback function for impuls counter of windspeed sensor
 void WindSpeed::interruptCallback()
 {
@@ -151,6 +156,10 @@ void WindSpeed::evaluateWindspeed()
         _windspeedEvaluation.RangeStartIndex[i] = exceededRangesIndex[i];
     }
 
+    if (exceededRangesCounter >= 3 && _evaluationCallback != nullptr)
+    {
+        _evaluationCallback();
+    }
 }
 
 String WindSpeed::getWindspeedString(bool addUnitSymbol)

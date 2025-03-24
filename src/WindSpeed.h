@@ -21,6 +21,7 @@ class WindSpeed
 public:
     WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20);
     void setupInterruptCallback(void (*externalInterruptCallback)(void));
+    void setupEvaluationCallback(std::function<void(void)> evaluationCallback);
     void setup();
     void interruptCallback();
     void calculateWindspeed(bool evaluate = true, bool log = false);
@@ -40,6 +41,7 @@ private:
     uint16_t _sampleRate = 1000;
     uint32_t _counter = 0;
     uint32_t _lastCounter = 0;
+    std::function<void(void)> _evaluationCallback = nullptr;
     WindspeedEvaluation _windspeedEvaluation;
     int _windspeedHistoryArray[300];
     void setupSDCard();
