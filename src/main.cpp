@@ -2,16 +2,14 @@
 #include <SD.h>
 #include <M5GFX.h>
 #include <M5Unified.h>
+#include <WiFiManager.h>
 #include <TimeLib.h>
-#include <WiFi.h>
-#include <WiFiUdp.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include "WindSpeed.h"
+#include "WindSpeedDisplay.h"
 
-M5GFX display;
-WiFiUDP Udp;
-AsyncWebServer server(80);
 
 // constants
 #define WINDSPEED_PIN 21
@@ -19,177 +17,31 @@ AsyncWebServer server(80);
 #define SAMPLE_RATE 1000            // ms
 #define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
-#define PLOT_OFFSET_X 20
-#define PLOT_OFFSET_Y 5
-#define PLOT_HEIGHT 100
-#define EVALUATION_BAR_HEIGHT 10
-#define BUTTON_HEIGHT 16
-#define TXT_DEFAULT_COLOR TFT_WHITE
-#define TXT_ALERT_COLOR TFT_RED
-#define TXT_DEFAULT_BACKGROUND_COLOR TFT_BLACK
-#define TXT_ALERT_BACKGROUND_COLOR TFT_RED
-#define TXT_BUTTON_PRESSED_COLOR TFT_NAVY
-#define RECTANGLE_BUTTON_DEFAULT_COLOR TFT_WHITE
-#define RECTANGLE_BUTTON_PRESSED_COLOR TFT_NAVY
-#define GRID_COLOR TFT_DARKGREY
-#define PLOT_BAR_DEFAULT_COLOR TFT_GREEN
-#define PLOT_BAR_ALERT_COLOR TFT_RED
-static int windspeedHistoryArray[EVALUATION_RANGE];
+#define NTP_SYNC_INTERVAL 600
+
 
 // global variables
-long counter;
-long lastCounter;
+WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
+WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
+
+WiFiUDP Udp;
+AsyncWebServer server(80);
 unsigned long lastMillis;
-const char ssid[] = "";
-const char pass[] = "";
+static const char *hostname = "f3xwind";
 static const char ntpServerName[] = "de.pool.ntp.org";
 unsigned int localPort = 8888;
 const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
+int menuX = 0;
+int menuY = 1;
 
-struct WindspeedEvaluation
+static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
+static constexpr const char *menu_y_items[3] = {"Status", "Plot", "Settings"};
+
+void interruptCallback(void)
 {
-  float MaxWindspeed;
-  float MinWindspeed;
-  float AverageWindspeed;
-  int NumberOfExceededRanges;
-  int RangeStartIndex[15];
-};
-
-String getWindspeedString(float windspeedValue, bool addUnitSymbol = false)
-{
-  char stringbuffer[100];
-  if (addUnitSymbol)
-  {
-    sprintf(stringbuffer, "%.1f m/s  ", windspeedValue);
-  }
-  else
-  {
-    sprintf(stringbuffer, "%.1f", windspeedValue);
-  }
-  return String(stringbuffer);
-}
-
-String getWindspeedEvaluationSingleString(float windspeedValue)
-{
-  char stringbuffer[100];
-  sprintf(stringbuffer, "%.1f", windspeedValue);
-  return String(stringbuffer);
-}
-
-String getWindspeedEvaluationString(WindspeedEvaluation windspeedEvaluation)
-{
-  return "MAX:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MaxWindspeed) + " MIN:" + getWindspeedEvaluationSingleString(windspeedEvaluation.MinWindspeed) + " AVG:" + getWindspeedEvaluationSingleString(windspeedEvaluation.AverageWindspeed);
-}
-
-String getTimestampString()
-{
-  time_t t = now();
-  char stringbuffer[100];
-  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
-  return String(stringbuffer);
-}
-
-String getLogCsvRow(float windspeedValue, char separationChar = ',')
-{
-  return getTimestampString() + separationChar + getWindspeedString(windspeedValue);
-}
-
-String getLogFilePath()
-{
-  time_t t = now();
-  char stringbuffer[100];
-  sprintf(stringbuffer, "/logs/%4u-%02u-%02u_windspeed.csv", year(t), month(t), day(t));
-  return String(stringbuffer);
-}
-
-String getLogFileHeader()
-{
-  return "Timestamp, Windspeed[m/s]";
-}
-
-// interrupt callback function for impuls counter of windspeed sensor
-void incrementCounter()
-{
-  counter++;
-  // ToDo: handle overflow
-}
-
-// windspeed in m/s
-// 20 impulses in one turn per second ==> 1.75m/s
-float calculateWindspeed(int deltaCounter)
-{
-  return ((float)deltaCounter / 20.0f * 1.75f * 1000 / SAMPLE_RATE);
-}
-
-void updateWindspeedArray(float windspeed)
-{
-  for (size_t i = EVALUATION_RANGE; i > 0; --i)
-  {
-    windspeedHistoryArray[i] = windspeedHistoryArray[i - 1];
-  }
-  windspeedHistoryArray[0] = (int)(windspeed * 10.0f);
-}
-
-WindspeedEvaluation evaluateWindspeed()
-{
-
-  int maxWindspeed = 0;
-  int minWindspeed = INT_MAX;
-  long sumWindspeed = 0;
-
-  int rangeCounter = 0;
-  int exceededRangesCounter = 0;
-  int exceededRangesIndex[15];
-
-  for (size_t i = 0; i < 15; i++)
-  {
-    exceededRangesIndex[i] = 0;
-  }
-
-  for (size_t i = EVALUATION_RANGE; i > 0; --i)
-  {
-    if (windspeedHistoryArray[i] > maxWindspeed)
-    {
-      maxWindspeed = windspeedHistoryArray[i];
-    }
-
-    if (windspeedHistoryArray[i] < minWindspeed)
-    {
-      minWindspeed = windspeedHistoryArray[i];
-    }
-    sumWindspeed += windspeedHistoryArray[i];
-
-    if (windspeedHistoryArray[i] > WINDSPEED_THRESHOLD * 10)
-    {
-      rangeCounter++;
-    }
-
-    if (rangeCounter == WINDSPEED_DURATION_RANGE)
-    {
-      exceededRangesIndex[exceededRangesCounter] = i;
-      exceededRangesCounter++;
-      rangeCounter = 0;
-    }
-
-    if (windspeedHistoryArray[i] <= WINDSPEED_THRESHOLD * 10)
-    {
-      rangeCounter = 0;
-    }
-  }
-
-  WindspeedEvaluation evaluationResult;
-  evaluationResult.NumberOfExceededRanges = exceededRangesCounter;
-  evaluationResult.MaxWindspeed = (float)maxWindspeed / 10.0f;
-  evaluationResult.MinWindspeed = (float)minWindspeed / 10.0f;
-  evaluationResult.AverageWindspeed = (float)(sumWindspeed / EVALUATION_RANGE) / 10.0f;
-  for (size_t i = 0; i < 15; i++)
-  {
-    evaluationResult.RangeStartIndex[i] = exceededRangesIndex[i];
-  }
-
-  return evaluationResult;
+  windSpeed.interruptCallback();
 }
 
 // send an NTP request to the time server at the given address
@@ -247,316 +99,6 @@ time_t getNtpTime()
   }
   Serial.println("No NTP Response :-(");
   return 0; // return 0 if unable to get the time
-}
-
-void drawMenuButton(String label, int xPos, bool isPressed = false)
-{
-  display.setFont(&fonts::DejaVu12);
-  int yPos = display.height() - BUTTON_HEIGHT;
-  if (isPressed)
-  {
-    display.setColor(RECTANGLE_BUTTON_PRESSED_COLOR);
-    display.setTextColor(TXT_BUTTON_PRESSED_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  else
-  {
-    display.setColor(RECTANGLE_BUTTON_DEFAULT_COLOR);
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  display.drawRect(xPos, yPos, 64, BUTTON_HEIGHT + 1);
-  display.drawCenterString(label, xPos + 33, yPos + 5);
-}
-
-void drawMenuButtons()
-{
-
-  if (M5.BtnA.isHolding())
-  {
-    drawMenuButton("ABCD", 31, true); // 64
-    if (!M5.Speaker.isPlaying())
-    {
-      M5.Speaker.tone(1000, 500);
-    }
-  }
-  else
-  {
-    drawMenuButton("ABCD", 31, false);
-  }
-
-  if (M5.BtnB.isPressed())
-  {
-    drawMenuButton("EFGH", 127, true); // 160
-    M5.Speaker.tone(500, 100);
-  }
-  else
-  {
-    drawMenuButton("EFGH", 127, false);
-  }
-
-  if (M5.BtnC.wasPressed())
-  {
-    drawMenuButton("IJKL", 223, true); // 256
-    M5.Speaker.tone(2000, 100);
-  }
-  else
-  {
-    drawMenuButton("IJKL", 223, false);
-  }
-}
-
-void drawWindspeedDisplayValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
-{
-  int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 8;
-  display.setFont(&fonts::DejaVu72);
-  int bigFontHeight = display.fontHeight();
-  if (windspeed > WINDSPEED_THRESHOLD)
-  {
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-  }
-  else
-  {
-    display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  }
-  display.drawString(getWindspeedString(windspeed, true), 1, yPos);
-  display.setFont(&fonts::DejaVu18);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  String evaluationString = getWindspeedEvaluationString(windspeedEvaluation);
-  display.drawString(evaluationString, 24, yPos + bigFontHeight + 2);
-}
-
-void drawGrid()
-{
-  display.setFont(&fonts::DejaVu12);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-  int fontOffsetY = (int)(display.fontHeight() / 2.0f);
-  for (size_t i = 0; i <= 10; i += 2)
-  {
-    int fontOffsetX = i < 10 ? display.fontWidth() : 2 * display.fontWidth();
-    display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + PLOT_HEIGHT - i * 10);
-  }
-
-  for (size_t i = 0; i <= 10; i += 1)
-  {
-    for (size_t j = 0; j < 1; j += 10)
-    {
-      display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, 4, GRID_COLOR);
-    }
-  }
-
-  // top and bottom line
-  // display.drawLine(PLOT_OFFSET_X, PLOT_OFFSET_Y - 1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_OFFSET_Y - 1, GRID_COLOR);
-  // display.drawLine(PLOT_OFFSET_X, PLOT_HEIGHT+PLOT_OFFSET_Y+1, PLOT_OFFSET_X + EVALUATION_RANGE, PLOT_HEIGHT+PLOT_OFFSET_Y+1, GRID_COLOR);
-}
-
-void drawWindspeedDisplayBarplot()
-{
-  int h = PLOT_HEIGHT;
-
-  drawGrid();
-
-  for (int x = 0; x < EVALUATION_RANGE; x++)
-  {
-    int xpos = PLOT_OFFSET_X + EVALUATION_RANGE - x - 1;
-
-    display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
-    if (windspeedHistoryArray[x] >= WINDSPEED_THRESHOLD * 10)
-    {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_ALERT_COLOR);
-    }
-    else
-    {
-      display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(windspeedHistoryArray[x], 100), min(windspeedHistoryArray[x], 100), PLOT_BAR_DEFAULT_COLOR);
-    }
-  }
-}
-
-void drawWindspeedEvaluationBars(WindspeedEvaluation windspeedEvaluation)
-{
-
-  display.setFont(&fonts::DejaVu9);
-  display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-  int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
-  display.fillRect(PLOT_OFFSET_X - 1, y, EVALUATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_GREEN);
-  for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
-  {
-    int x = PLOT_OFFSET_X + EVALUATION_RANGE - windspeedEvaluation.RangeStartIndex[i] - WINDSPEED_DURATION_RANGE;
-    display.fillRect(x, y, WINDSPEED_DURATION_RANGE, EVALUATION_BAR_HEIGHT, TFT_RED);
-    display.drawString(String(i + 1), x + 7, y);
-  }
-}
-
-String getWindspeedStatisticJson()
-{
-  WindspeedEvaluation windspeedEvaluation = evaluateWindspeed();
-
-  JsonDocument jsonDocument;
-
-  jsonDocument["currentWindspeed"] = windspeedHistoryArray[0];
-  jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
-  jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
-  jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
-  jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
-
-  JsonArray evaluationArray = jsonDocument["evaluationArray"].to<JsonArray>();
-
-  // if (windspeedEvaluation.NumberOfExceededRanges > 0)
-  // for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
-  // {
-  //   /* code */
-  // }
-
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-  evaluationArray.add(1);
-  evaluationArray.add(1);
-  evaluationArray.add(1);
-  evaluationArray.add(0);
-  evaluationArray.add(0);
-
-  String jsonString;
-  jsonDocument.shrinkToFit();
-  serializeJson(jsonDocument, jsonString);
-  return jsonString;
-}
-
-String getWindspeedJson()
-{
-  JsonDocument jsonDocument;
-
-  for (size_t i = 0; i < EVALUATION_RANGE; i++)
-  {
-    JsonObject arrayDocument = jsonDocument.add<JsonObject>();
-    arrayDocument["x"] = i;
-    arrayDocument["y"] = windspeedHistoryArray[EVALUATION_RANGE - 1 - i] / 10.0f;
-  }
-
-  String jsonString;
-  jsonDocument.shrinkToFit();
-  serializeJson(jsonDocument, jsonString);
-
-  return jsonString;
-}
-
-void createDir(fs::FS &fs, const char *path)
-{
-  Serial.printf("Creating Dir: %s\n", path);
-  if (fs.mkdir(path))
-  {
-    Serial.println("Dir created");
-  }
-  else
-  {
-    Serial.println("mkdir failed");
-  }
-}
-
-void readFile(fs::FS &fs, const char *path)
-{
-  Serial.printf("Reading file: %s\n", path);
-
-  File file = fs.open(path);
-  if (!file)
-  {
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-
-  Serial.print("Read from file: ");
-  while (file.available())
-  {
-    Serial.write(file.read());
-  }
-  file.close();
-}
-
-void writeFile(fs::FS &fs, const char *path, const char *message)
-{
-  Serial.printf("Writing file: %s\n", path);
-
-  File file = fs.open(path, FILE_WRITE);
-  if (!file)
-  {
-    Serial.println("Failed to open file for writing");
-    return;
-  }
-  if (file.print(message))
-  {
-    Serial.println("File written");
-  }
-  else
-  {
-    Serial.println("Write failed");
-  }
-  file.close();
-}
-
-void writeLineToFile(fs::FS &fs, const char *path, const char *message)
-{
-  Serial.printf("Writing file: %s\n", path);
-
-  File file = fs.open(path, FILE_WRITE);
-  if (!file)
-  {
-    Serial.println("Failed to open file for writing");
-    return;
-  }
-  if (file.println(message))
-  {
-    Serial.println("File written");
-  }
-  else
-  {
-    Serial.println("Write failed");
-  }
-  file.close();
-}
-
-void appendFile(fs::FS &fs, const char *path, const char *message)
-{
-  Serial.printf("Appending to file: %s\n", path);
-
-  File file = fs.open(path, FILE_APPEND);
-  if (!file)
-  {
-    Serial.println("Failed to open file for appending");
-    return;
-  }
-  if (file.print(message))
-  {
-    Serial.println("Message appended");
-  }
-  else
-  {
-    Serial.println("Append failed");
-  }
-  file.close();
-}
-
-void appendLineToFile(fs::FS &fs, const char *path, const char *message)
-{
-
-  File file = fs.open(path, FILE_APPEND);
-  if (!file)
-  {
-    Serial.println("Failed to open file for appending");
-    return;
-  }
-  
-  if (!file.println(message))
-  {
-    Serial.println("Append failed");
-  }
-  file.close();
-}
-
-void logWindspeedToSDCard(float windspeed)
-{
-  if (!SD.exists(getLogFilePath().c_str()))
-  {
-    writeLineToFile(SD, getLogFilePath().c_str(), getLogFileHeader().c_str());
-  }
-  appendLineToFile(SD, getLogFilePath().c_str(), getLogCsvRow(windspeed).c_str());
 }
 
 String getDownloadFilesJson() {
@@ -659,24 +201,78 @@ String printDirectory()
   return webpage;
 }
 
+void handleDownloadRequest(AsyncWebServerRequest *request)
+{
+
+  Serial.print("Method: ");
+  Serial.println(request->method());
+
+  Serial.println("Params: ");
+  for (size_t i = 0; i < request->params(); i++)
+  {
+    Serial.println(request->getParam(i)->name());
+  }
+
+  Serial.println("Args: ");
+  for (size_t i = 0; i < request->args(); i++)
+  {
+    Serial.println(request->argName(i));
+  }
+  if (request->hasParam("filename", false))
+  { // Check for files: <input name="filename" />
+
+    String filename2 = request->arg("filename");
+    Serial.println(filename2);
+    Serial.println("getParam");
+    AsyncWebParameter *parameter = request->getParam(0);
+    Serial.println(parameter->name());
+    Serial.println(parameter->value());
+    String filename = request->getParam("filename")->value();
+    Serial.println("Download Filename: " + filename);
+    // AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
+    request->send(SD, "/logs/" + filename, String(), true);
+    return;
+  }
+  else
+  {
+    request->send(200, "text/html", printDirectory());
+  }
+}
+
+void playSound(int duration = 2000) {
+  M5.Speaker.tone(440, duration);
+}
+
+void stopSound()
+{
+  M5.Speaker.stop();
+}
 
 void setupSoundModule()
 {
-  auto cfg = M5.config();
-  cfg.external_speaker.atomic_spk = true;
-  cfg.external_speaker.module_display = true;
+  auto config = M5.config();
+  config.external_speaker.atomic_spk = true;
+  config.external_speaker.module_display = true;
   M5.Speaker.setVolume(128);
   M5.Speaker.begin();
 }
 
 void setupWifi()
 {
-  WiFi.begin(ssid, pass);
+  WiFi.mode(WIFI_STA);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
+  WiFiManager wifiManager;
+  wifiManager.setHostname(hostname);
+  bool res;
+
+  //wifiManager.resetSettings();
+
+  wifiManager.autoConnect("F3XWind");
+
+  if (!res) {
+    Serial.println("Failed to connect");
+  } else {
+    Serial.println("Connected successfull");
   }
 
   Serial.print("IP number assigned by DHCP is ");
@@ -689,78 +285,27 @@ void setupNtpTimeSyncProvider()
   Udp.begin(localPort);
   Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
-  setSyncInterval(300);
+  setSyncInterval(NTP_SYNC_INTERVAL);
+}
+
+void evaluationCallback() {
+    playSound(5000);
 }
 
 void setupWindspeedIO()
 {
-  pinMode(WINDSPEED_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN), incrementCounter, RISING);
+  windSpeed.setupInterruptCallback(interruptCallback);
+  windSpeed.setupEvaluationCallback(&evaluationCallback);
 }
-
-void setupDisplay()
-{
-  display.init();
-  display.startWrite();
-  display.fillScreen(TFT_BLACK);
-  display.endWrite();
-
-  if (display.isEPD())
-  {
-    display.setEpdMode(epd_mode_t::epd_fastest);
-  }
-  if (display.width() < display.height())
-  {
-    display.setRotation(display.getRotation() ^ 1);
-  }
-}
-
-void handleDownloadRequest(AsyncWebServerRequest *request)
-{
-
-  Serial.print("Method: ");
-  Serial.println(request->method());
-  
-  Serial.println("Params: ");
-  for (size_t i = 0; i < request->params(); i++)
-  {
-    Serial.println(request->getParam(i)->name());
-  }
-
-  Serial.println("Args: ");
-  for (size_t i = 0; i < request->args(); i++)
-  {
-    Serial.println(request->argName(i));
-  }
-  if (request->hasParam("filename", false)) 
-  { // Check for files: <input name="filename" />
-
-    String filename2 = request->arg("filename");
-    Serial.println(filename2);
-    Serial.println("getParam");
-    AsyncWebParameter* parameter = request->getParam(0);
-    Serial.println(parameter->name());
-    Serial.println(parameter->value());
-    String filename = request->getParam("filename")->value();
-    Serial.println("Download Filename: " + filename);
-    //AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
-    request->send(SD, "/logs/" + filename, String(), true);
-    return;
-  } else {
-    request->send(200, "text/html", printDirectory());
-  }
-}
-
 
 void setupServer()
 {
-
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html"); });
   server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "application/json", getWindspeedJson().c_str()); });
+            { request->send_P(200, "application/json", windSpeed.getWindspeedJson().c_str()); });
   server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "application/json", getWindspeedStatisticJson().c_str()); });
+            { request->send_P(200, "application/json", windSpeed.getWindspeedEvaluationJson().c_str()); });
   server.on("/downloadtest", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SD, "/logs/2024-09-27_windspeed.csv", String(), true); });
   server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -772,6 +317,7 @@ void setupServer()
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
+  Serial.println("Server begin");
   server.begin();
 }
 
@@ -784,77 +330,110 @@ void setupLittleFS()
   }
 }
 
-void setupSDCard()
-{
-  if (!SD.begin(GPIO_NUM_4, SPI, 25000000))
-  {
-    Serial.println("Card Mount Failed");
-    return;
-  }
-  uint8_t cardType = SD.cardType();
 
-  if (cardType == CARD_NONE)
-  {
-    Serial.println("No SD card attached");
-    return;
-  }
-
-  Serial.print("SD Card Type: ");
-  if (cardType == CARD_MMC)
-  {
-    Serial.println("MMC");
-  }
-  else if (cardType == CARD_SD)
-  {
-    Serial.println("SDSC");
-  }
-  else if (cardType == CARD_SDHC)
-  {
-    Serial.println("SDHC");
-  }
-  else
-  {
-    Serial.println("UNKNOWN");
-  }
-  Serial.printf("SD Card Size: %lluMB\n", SD.cardSize() / (1024 * 1024));
-  Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
-  Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
-
-  createDir(SD, "/logs");
-}
 
 void setup(void)
 {
   M5.begin();
-  setupSDCard();
+  windSpeed.setup();
   setupWindspeedIO();
   setupWifi();
   setupNtpTimeSyncProvider();
   setupLittleFS();
   setupServer();
   setupSoundModule();
-  setupDisplay();
+  windSpeedDisplay.setup();
+  
 }
+
+void evaluateTouches() {
+  auto count = M5.Touch.getCount();
+  if (count != 0)
+  {
+    static m5::touch_state_t prev_state;
+    auto t = M5.Touch.getDetail();
+
+    if (t.wasFlicked())
+    {
+
+      if (abs(t.distanceX()) > 30 && (abs(t.distanceX()) > abs(t.distanceY())) )
+        {
+          if (t.distanceX() > 0)
+          {
+            //Serial.println("Swipe RIGHT");
+            if (menuY == 1) {
+              if (menuX == 3) {
+                menuX = 0;
+              } else {
+                menuX++;
+              }
+            }
+          }
+          else
+          {
+            //Serial.println("Swipe LEFT");
+            if (menuY == 1)
+            {
+              if (menuX == 0)
+              {
+                menuX = 3;
+              }
+              else
+              {
+                menuX--;
+              }
+            }
+          }
+        }
+
+        if (abs(t.distanceY()) > 30 && (abs(t.distanceY()) > abs(t.distanceX())))
+        {
+          if (t.distanceY() > 0)
+          {
+            //Serial.println("Swipe DOWN");
+
+            if (menuY > 0)
+            {
+              menuY--;
+            }
+          }
+          else
+          {
+            //Serial.println("Swipe UP");
+            if (menuY < 2)
+            {
+              menuY++;
+            }
+          }
+      }
+
+      Serial.println();
+      Serial.printf("MenuX: %s MenuY: %s", menu_x_items[menuX], menu_y_items[menuY]);
+      //Serial.println("--- WasFlicked ---");
+      //Serial.printf("X: %d Y: %d distanceX: %d distanceY: %d deltaX: %d deltyY: %d", t.x, t.y, t.distanceX(), t.distanceY(), t.deltaX(), t.deltaY());
+    }
+
+    if (t.wasHold()) {
+      stopSound();
+    }
+
+  }
+}
+
+
 
 void loop(void)
 {
+  M5.delay(1);
+  M5.update();
+
+  evaluateTouches();
+
   long currentMillis = millis();
   if (currentMillis - lastMillis >= SAMPLE_RATE)
   {
-    M5.update();
-    float windspeed = calculateWindspeed(counter - lastCounter);
+    windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
-    lastCounter = counter;
-    updateWindspeedArray(windspeed);
-    WindspeedEvaluation evaluationResult = evaluateWindspeed();
-
-    display.waitDisplay();
-    drawWindspeedDisplayValues(windspeed, evaluationResult);
-    drawWindspeedDisplayBarplot();
-    drawWindspeedEvaluationBars(evaluationResult);
-    drawMenuButtons();
-    display.display();
-
-    logWindspeedToSDCard(windspeed);
+    windSpeedDisplay.draw();
   }
 }
