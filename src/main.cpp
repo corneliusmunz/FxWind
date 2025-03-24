@@ -434,6 +434,6 @@ void loop(void)
   {
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
-    windSpeedDisplay.draw();
+    windSpeedDisplay.draw((DrawType)menuX);
   }
 }

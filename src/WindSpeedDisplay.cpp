@@ -6,6 +6,7 @@ WindSpeedDisplay::WindSpeedDisplay(uint16_t evaluationRange, uint16_t windspeedT
     _windspeedThreshold = windspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
     _windSpeed = windSpeed;
+    _currentDrawType = DrawType::COMBINED;
 }
 
 void WindSpeedDisplay::setup()
@@ -25,13 +26,86 @@ void WindSpeedDisplay::setup()
     }
 }
 
-void WindSpeedDisplay::draw() 
+void WindSpeedDisplay::draw(DrawType drawType) 
 {
+    Serial.println();
+    Serial.printf("DrawType: %d", drawType);
+    if (_currentDrawType != drawType) {
+        _display.clear();
+        _currentDrawType = drawType;
+    }
+
+    switch (drawType)
+    {
+    case DrawType::COMBINED:
+        drawCombinedView();
+        break;
+
+    case DrawType::PLOT:
+        drawPlotView();
+        break;
+
+    case DrawType::NUMBER:
+        drawNumberView();
+        break;
+
+    case DrawType::STATISTIC:
+        drawStatisticView();
+        break;
+    
+    default:
+        drawCombinedView();
+        break;
+    }
+}
+
+void WindSpeedDisplay::drawStatisticView() 
+{
+    Serial.println("Statistic view");
+    _display.waitDisplay();
+    drawStatistic(_windSpeed->getWindspeedEvaluation());
+    _display.display();
+}
+
+void WindSpeedDisplay::drawNumberView()
+{
+    Serial.println("Number view");
+    _display.waitDisplay();
+    drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation());
+    _display.display();
+}
+
+void WindSpeedDisplay::drawPlotView()
+{
+    Serial.println("Plot view");
+    _display.waitDisplay();
+    drawBarPlot();
+    drawEvaluationBars(_windSpeed->getWindspeedEvaluation());
+    _display.display();
+}
+
+void WindSpeedDisplay::drawCombinedView()
+{
+    Serial.println("Combined view");
     _display.waitDisplay();
     drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation());
     drawBarPlot();
     drawEvaluationBars(_windSpeed->getWindspeedEvaluation());
     _display.display();
+}
+
+void WindSpeedDisplay::drawStatistic(WindspeedEvaluation windspeedEvaluation)
+{
+    int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 12;
+    _display.setFont(&fonts::DejaVu72);
+    int bigFontHeight = _display.fontHeight();
+    _display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
+    _display.drawString("Statistic", 1, yPos);
+    _display.setFont(&fonts::DejaVu18);
+    char stringbuffer[100];
+    sprintf(stringbuffer, "%.1f", windspeedEvaluation.MaxWindspeed);
+    String evaluationString = "Max: " + String(stringbuffer);
+    _display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
 }
 
 void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
