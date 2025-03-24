@@ -33,7 +33,8 @@ public:
     void setup();
     void draw(DrawType drawType);
 
-
+private:
+    M5GFX _display;
     uint16_t _evaluationRange = 300;
     uint16_t _windspeedThreshold = 8;
     uint16_t _windspeedDurationRange = 20;
