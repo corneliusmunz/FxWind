@@ -157,7 +157,7 @@ void WindSpeed::evaluateWindspeed()
     }
 
     if (exceededRangesCounter < _numberOfRangesThreshold) {
-        Serial.println("Reset isCallbackAlreadySent");
+        //Serial.println("Reset isCallbackAlreadySent");
         _isCallbackAlreadySent = false;
     }
 

@@ -17,7 +17,6 @@
 #define SAMPLE_RATE 1000            // ms
 #define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
-
 #define NTP_SYNC_INTERVAL 600
 
 
@@ -34,8 +33,11 @@ unsigned int localPort = 8888;
 const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
+int menuX = 0;
+int menuY = 1;
 
-
+static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
+static constexpr const char *menu_y_items[3] = {"Status", "Plot", "Settings"};
 
 void interruptCallback(void)
 {
@@ -344,40 +346,92 @@ void setup(void)
   
 }
 
+void evaluateTouches() {
+  auto count = M5.Touch.getCount();
+  if (count != 0)
+  {
+    static m5::touch_state_t prev_state;
+    auto t = M5.Touch.getDetail();
+
+    if (t.wasFlicked())
+    {
+
+      if (abs(t.distanceX()) > 30 && (abs(t.distanceX()) > abs(t.distanceY())) )
+        {
+          if (t.distanceX() > 0)
+          {
+            //Serial.println("Swipe RIGHT");
+            if (menuY == 1) {
+              if (menuX == 3) {
+                menuX = 0;
+              } else {
+                menuX++;
+              }
+            }
+          }
+          else
+          {
+            //Serial.println("Swipe LEFT");
+            if (menuY == 1)
+            {
+              if (menuX == 0)
+              {
+                menuX = 3;
+              }
+              else
+              {
+                menuX--;
+              }
+            }
+          }
+        }
+
+        if (abs(t.distanceY()) > 30 && (abs(t.distanceY()) > abs(t.distanceX())))
+        {
+          if (t.distanceY() > 0)
+          {
+            //Serial.println("Swipe DOWN");
+
+            if (menuY > 0)
+            {
+              menuY--;
+            }
+          }
+          else
+          {
+            //Serial.println("Swipe UP");
+            if (menuY < 2)
+            {
+              menuY++;
+            }
+          }
+      }
+
+      Serial.println();
+      Serial.printf("MenuX: %s MenuY: %s", menu_x_items[menuX], menu_y_items[menuY]);
+      //Serial.println("--- WasFlicked ---");
+      //Serial.printf("X: %d Y: %d distanceX: %d distanceY: %d deltaX: %d deltyY: %d", t.x, t.y, t.distanceX(), t.distanceY(), t.deltaX(), t.deltaY());
+    }
+
+    if (t.wasHold()) {
+      stopSound();
+    }
+
+  }
+}
+
+
 
 void loop(void)
 {
   M5.delay(1);
   M5.update();
 
-  auto count = M5.Touch.getCount();
-  if (count != 0)
-  {
-    static m5::touch_state_t prev_state;
-    auto t = M5.Touch.getDetail();
-    if (prev_state != t.state)
-    {
-      prev_state = t.state;
-      static constexpr const char *state_name[16] =
-          {"none", "touch", "touch_end", "touch_begin", "___", "hold", "hold_end", "hold_begin", "___", "flick", "flick_end", "flick_begin", "___", "drag", "drag_end", "drag_begin"};
-      Serial.printf("%s", state_name[t.state]);
-      if (t.state == 5)
-      {
-        stopSound();
-      }
-
-      if (t.state != 5)
-      {
-        //M5.Speaker.stop();
-      }
-    }
-
-  }
+  evaluateTouches();
 
   long currentMillis = millis();
   if (currentMillis - lastMillis >= SAMPLE_RATE)
   {
-    M5.update();
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw();
