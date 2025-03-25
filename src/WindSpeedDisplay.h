@@ -47,7 +47,7 @@ private:
     void drawNumberView();
 
     void drawStatistic(WindspeedEvaluation windspeedEvaluation);
-    void drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation);
+    void drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight);
     void drawBarPlot(int plotHeight);
     void drawEvaluationBars(WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight);
     void drawGrid(int plotHeight);

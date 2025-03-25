@@ -71,7 +71,7 @@ void WindSpeedDisplay::drawNumberView()
 {
     Serial.println("Number view");
     _display.waitDisplay();
-    drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation());
+    drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation(), 0, 0);
     _display.display();
 }
 
@@ -90,7 +90,7 @@ void WindSpeedDisplay::drawCombinedView()
 {
     Serial.println("Combined view");
     _display.waitDisplay();
-    drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation());
+    drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation(), PLOT_HEIGHT, EVALUATION_BAR_HEIGHT);
     drawBarPlot(PLOT_HEIGHT);
     drawEvaluationBars(_windSpeed->getWindspeedEvaluation(), PLOT_HEIGHT, EVALUATION_BAR_HEIGHT);
     _display.display();
@@ -110,11 +110,16 @@ void WindSpeedDisplay::drawStatistic(WindspeedEvaluation windspeedEvaluation)
     _display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
 }
 
-void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation)
+void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight)
 {
-    int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 12;
     _display.setFont(&fonts::DejaVu72);
     int bigFontHeight = _display.fontHeight();
+
+    int yPos = PLOT_OFFSET_Y + evaluationBarHeight + plotHeight + 12;
+    if (plotHeight == 0 && evaluationBarHeight == 0)
+    {
+        yPos = (int)(_display.height()/2.0) - (int)(bigFontHeight/2.0) - 9;
+    }
     if (windspeed > _windspeedThreshold)
     {
         _display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
