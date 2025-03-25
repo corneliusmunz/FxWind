@@ -32,6 +32,7 @@ public:
     String getWindspeedEvaluationString();
     String getWindspeedString(bool addUnitSymbol = false);
     int getWindSpeedHistoryArrayElement(int i);
+    String getTimestampString();
 
 private:
     uint8_t _sensorPin;
@@ -50,7 +51,6 @@ private:
     void logWindspeedToSDCard(fs::FS &fs);
     void evaluateWindspeed();
     void updateWindspeedArray(float currentWindspeed);
-    String getTimestampString();
     String getWindspeedEvaluationSingleString(float windspeedValue);
     String getLogCsvRow(float windspeedValue, char separationChar = ',');
     String getLogFilePath();

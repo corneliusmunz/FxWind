@@ -28,8 +28,6 @@ void WindSpeedDisplay::setup()
 
 void WindSpeedDisplay::draw(DrawType drawType) 
 {
-    Serial.println();
-    Serial.printf("DrawType: %d", drawType);
     if (_currentDrawType != drawType) {
         _display.clear();
         _currentDrawType = drawType;
@@ -61,7 +59,6 @@ void WindSpeedDisplay::draw(DrawType drawType)
 
 void WindSpeedDisplay::drawStatisticView() 
 {
-    Serial.println("Statistic view");
     _display.waitDisplay();
     drawStatistic(_windSpeed->getWindspeedEvaluation());
     _display.display();
@@ -69,7 +66,6 @@ void WindSpeedDisplay::drawStatisticView()
 
 void WindSpeedDisplay::drawNumberView()
 {
-    Serial.println("Number view");
     _display.waitDisplay();
     drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation(), 0, 0);
     _display.display();
@@ -79,7 +75,6 @@ void WindSpeedDisplay::drawPlotView()
 {
     int evaluationBarHeight = 40;
     int plotHeight = _display.height() - evaluationBarHeight;
-    Serial.println("Plot view");
     _display.waitDisplay();
     drawBarPlot(plotHeight);
     drawEvaluationBars(_windSpeed->getWindspeedEvaluation(), plotHeight, evaluationBarHeight);
@@ -88,7 +83,6 @@ void WindSpeedDisplay::drawPlotView()
 
 void WindSpeedDisplay::drawCombinedView()
 {
-    Serial.println("Combined view");
     _display.waitDisplay();
     drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation(), PLOT_HEIGHT, EVALUATION_BAR_HEIGHT);
     drawBarPlot(PLOT_HEIGHT);
@@ -98,16 +92,22 @@ void WindSpeedDisplay::drawCombinedView()
 
 void WindSpeedDisplay::drawStatistic(WindspeedEvaluation windspeedEvaluation)
 {
-    int yPos = PLOT_OFFSET_Y + EVALUATION_BAR_HEIGHT + PLOT_HEIGHT + 12;
-    _display.setFont(&fonts::DejaVu72);
-    int bigFontHeight = _display.fontHeight();
-    _display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
-    _display.drawString("Statistic", 1, yPos);
     _display.setFont(&fonts::DejaVu18);
-    char stringbuffer[100];
-    sprintf(stringbuffer, "%.1f", windspeedEvaluation.MaxWindspeed);
-    String evaluationString = "Max: " + String(stringbuffer);
-    _display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
+    int fontHeight = _display.fontHeight();
+    _display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
+    int yPos = PLOT_OFFSET_Y;
+    int spacer = 10;
+    int yPosDelta = fontHeight + 4;
+
+        _display.drawString("Date: " + _windSpeed->getTimestampString(), 1, yPos);
+        _display.drawString("Current: " + _windSpeed->getWindspeedString(false) + " m/s", 1, yPos + 1 * yPosDelta + 1 * spacer);
+        _display.drawString("Min (last 300s): " + String(windspeedEvaluation.MinWindspeed) + " m/s", 1, yPos + 2 * yPosDelta + 2 * spacer);
+        _display.drawString("Max (last 300s): " + String(windspeedEvaluation.MaxWindspeed) + " m/s", 1, yPos + 3 * yPosDelta + 2 * spacer);
+        _display.drawString("Average (last300s): " + String(windspeedEvaluation.AverageWindspeed) + " m/s", 1, yPos + 4 * yPosDelta + 2 * spacer);
+        _display.drawString("Min (today): " + String(windspeedEvaluation.MinWindspeed) + " m/s", 1, yPos + 5 * yPosDelta + 3 * spacer);
+        _display.drawString("Max (today): " + String(windspeedEvaluation.MaxWindspeed) + " m/s", 1, yPos + 6 * yPosDelta + 3 * spacer);
+        _display.drawString("Average (today): " + String(windspeedEvaluation.AverageWindspeed) + " m/s", 1, yPos + 7 * yPosDelta + 3 * spacer);
+        _display.drawString("Number of exceeded frames: " + String(windspeedEvaluation.NumberOfExceededRanges), 1, yPos + 8 * yPosDelta + 4 * spacer);
 }
 
 void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight)
