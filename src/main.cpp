@@ -9,8 +9,6 @@
 #include <LittleFS.h>
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
-#include "StatusDisplay.h"
-#include "ConfigurationDisplay.h"
 
 
 // constants
@@ -26,8 +24,6 @@
 WiFiManager wifiManager;
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
-StatusDisplay statusDisplay;
-ConfigurationDisplay configurationDisplay;
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -39,11 +35,8 @@ const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
 int menuX = 0;
-int menuY = 1;
-bool menuChanged = false;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
-static constexpr const char *menu_y_items[3] = {"Status", "Plot", "Settings"};
 
 void interruptCallback(void)
 {
@@ -348,87 +341,53 @@ void setup(void)
   setupServer();
   setupSoundModule();
   windSpeedDisplay.setup();
-  statusDisplay.setup();
-  configurationDisplay.setup();
-  
 }
 
-void evaluateTouches() {
+void evaluateTouches()
+{
   auto count = M5.Touch.getCount();
   if (count != 0)
   {
     static m5::touch_state_t prev_state;
-    auto t = M5.Touch.getDetail();
+    auto touchDetail = M5.Touch.getDetail();
 
-    if (t.wasFlicked())
+    if (touchDetail.wasFlicked())
     {
 
-      menuChanged = true;
-      if (abs(t.distanceX()) > 30 && (abs(t.distanceX()) > abs(t.distanceY())) )
+      if (abs(touchDetail.distanceX()) > 30 && (abs(touchDetail.distanceX()) > abs(touchDetail.distanceY())))
+      {
+        if (touchDetail.distanceX() > 0)
         {
-          if (t.distanceX() > 0)
+          // Serial.println("Swipe RIGHT");
+          if (menuX == 3)
           {
-            //Serial.println("Swipe RIGHT");
-            if (menuY == 1) {
-              if (menuX == 3) {
-                menuX = 0;
-              } else {
-                menuX++;
-              }
-            }
+            menuX = 0;
           }
           else
           {
-            //Serial.println("Swipe LEFT");
-            if (menuY == 1)
-            {
-              if (menuX == 0)
-              {
-                menuX = 3;
-              }
-              else
-              {
-                menuX--;
-              }
-            }
+            menuX++;
           }
         }
-
-        if (abs(t.distanceY()) > 30 && (abs(t.distanceY()) > abs(t.distanceX())))
+        else
         {
-          if (t.distanceY() > 0)
+          // Serial.println("Swipe LEFT");
+          if (menuX == 0)
           {
-            //Serial.println("Swipe DOWN");
-
-            if (menuY > 0)
-            {
-              menuY--;
-            }
+            menuX = 3;
           }
           else
           {
-            //Serial.println("Swipe UP");
-            if (menuY < 2)
-            {
-              menuY++;
-            }
+            menuX--;
           }
+        }
       }
-
-      Serial.println();
-      Serial.printf("MenuX: %s MenuY: %s", menu_x_items[menuX], menu_y_items[menuY]);
-      //Serial.println("--- WasFlicked ---");
-      //Serial.printf("X: %d Y: %d distanceX: %d distanceY: %d deltaX: %d deltyY: %d", t.x, t.y, t.distanceX(), t.distanceY(), t.deltaX(), t.deltaY());
     }
-
-    if (t.wasHold()) {
+    if (touchDetail.wasHold())
+    {
       stopSound();
     }
-
   }
 }
-
-
 
 void loop(void)
 {
@@ -442,26 +401,6 @@ void loop(void)
   {
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
-    if (menuY == 0) {
-      if (menuChanged) {
-        menuChanged = false;
-        statusDisplay.clear();
-      }
-      statusDisplay.draw(wifiManager.getWiFiHostname());
-    } else if (menuY == 2) {
-      if (menuChanged)
-      {
-        menuChanged = false;
-        statusDisplay.clear();
-      }
-      configurationDisplay.draw("Volume: 128");
-    }
-    } else {
-      if (menuChanged)
-      {
-        menuChanged = false;
-        statusDisplay.clear();
-      }
-      windSpeedDisplay.draw((DrawType)menuX);
-    }
+    windSpeedDisplay.draw((DrawType)menuX);
   }
+}
