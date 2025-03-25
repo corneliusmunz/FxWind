@@ -77,10 +77,12 @@ void WindSpeedDisplay::drawNumberView()
 
 void WindSpeedDisplay::drawPlotView()
 {
+    int evaluationBarHeight = 40;
+    int plotHeight = _display.height() - evaluationBarHeight;
     Serial.println("Plot view");
     _display.waitDisplay();
-    drawBarPlot();
-    drawEvaluationBars(_windSpeed->getWindspeedEvaluation());
+    drawBarPlot(plotHeight);
+    drawEvaluationBars(_windSpeed->getWindspeedEvaluation(), plotHeight, evaluationBarHeight);
     _display.display();
 }
 
@@ -89,8 +91,8 @@ void WindSpeedDisplay::drawCombinedView()
     Serial.println("Combined view");
     _display.waitDisplay();
     drawValues(_windSpeed->getCurrentWindspeed(), _windSpeed->getWindspeedEvaluation());
-    drawBarPlot();
-    drawEvaluationBars(_windSpeed->getWindspeedEvaluation());
+    drawBarPlot(PLOT_HEIGHT);
+    drawEvaluationBars(_windSpeed->getWindspeedEvaluation(), PLOT_HEIGHT, EVALUATION_BAR_HEIGHT);
     _display.display();
 }
 
@@ -128,63 +130,61 @@ void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeed
     _display.drawString(evaluationString, 24, yPos + bigFontHeight + 6);
 }
 
-void WindSpeedDisplay::drawGrid()
+void WindSpeedDisplay::drawGrid(int plotHeight)
 {
     _display.setFont(&fonts::DejaVu12);
     _display.setTextColor(TXT_DEFAULT_COLOR, TXT_DEFAULT_BACKGROUND_COLOR);
     int fontOffsetY = (int)(_display.fontHeight() / 2.0f);
+    int scaleTicks = (int) (plotHeight/10.0);
     for (size_t i = 0; i <= 10; i += 2)
     {
         int fontOffsetX = i < 10 ? _display.fontWidth() : 2 * _display.fontWidth();
-        _display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + PLOT_HEIGHT - i * 10);
+        _display.drawString(String(i), PLOT_OFFSET_X - fontOffsetX - 10, PLOT_OFFSET_Y - fontOffsetY + plotHeight - i * scaleTicks);
     }
 
     for (size_t i = 0; i <= 10; i += 1)
     {
         for (size_t j = 0; j < 1; j += 10)
         {
-            _display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + PLOT_HEIGHT - i * 10, 4, GRID_COLOR);
+            _display.drawFastHLine(PLOT_OFFSET_X - 4 + j, PLOT_OFFSET_Y + plotHeight - i * scaleTicks, 4, GRID_COLOR);
         }
     }
-
-    // top and bottom line
-    // display.drawLine(PLOT_OFFSET_X, PLOT_OFFSET_Y - 1, PLOT_OFFSET_X + _evaluationRange, PLOT_OFFSET_Y - 1, GRID_COLOR);
-    // display.drawLine(PLOT_OFFSET_X, PLOT_HEIGHT+PLOT_OFFSET_Y+1, PLOT_OFFSET_X + _evaluationRange, PLOT_HEIGHT+PLOT_OFFSET_Y+1, GRID_COLOR);
 }
 
-void WindSpeedDisplay::drawBarPlot()
+void WindSpeedDisplay::drawBarPlot(int plotHeight)
 {
-    int h = PLOT_HEIGHT;
-
-    drawGrid();
+    drawGrid(plotHeight);
 
     for (int x = 0; x < _evaluationRange; x++)
     {
         int xpos = PLOT_OFFSET_X + _evaluationRange - x - 1;
+        int xValue = _windSpeed->getWindSpeedHistoryArrayElement(x);
+        int xValueScaled = (int) (xValue / 100.0 * plotHeight);
+        int xValueScaledLimited = min(xValueScaled, plotHeight);
 
-        _display.drawFastVLine(xpos, PLOT_OFFSET_Y, PLOT_HEIGHT, TFT_BLACK);
-        if (_windSpeed->getWindSpeedHistoryArrayElement(x) >= _windspeedThreshold * 10)
+        _display.drawFastVLine(xpos, PLOT_OFFSET_Y, plotHeight, TFT_BLACK);
+        if (xValue >= _windspeedThreshold * 10)
         {
-            _display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(_windSpeed->getWindSpeedHistoryArrayElement(x), 100), min(_windSpeed->getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_ALERT_COLOR);
+            _display.drawFastVLine(xpos, PLOT_OFFSET_Y + plotHeight - xValueScaledLimited, xValueScaledLimited, PLOT_BAR_ALERT_COLOR);
         }
         else
         {
-            _display.drawFastVLine(xpos, PLOT_OFFSET_Y + PLOT_HEIGHT - min(_windSpeed->getWindSpeedHistoryArrayElement(x), 100), min(_windSpeed->getWindSpeedHistoryArrayElement(x), 100), PLOT_BAR_DEFAULT_COLOR);
+            _display.drawFastVLine(xpos, PLOT_OFFSET_Y + plotHeight - xValueScaledLimited, xValueScaledLimited, PLOT_BAR_DEFAULT_COLOR);
         }
     }
 }
 
-void WindSpeedDisplay::drawEvaluationBars(WindspeedEvaluation windspeedEvaluation)
+void WindSpeedDisplay::drawEvaluationBars(WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight)
 {
 
     _display.setFont(&fonts::DejaVu12);
     _display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
-    int y = PLOT_OFFSET_Y + PLOT_HEIGHT + 3;
-    _display.fillRect(PLOT_OFFSET_X - 1, y, _evaluationRange, EVALUATION_BAR_HEIGHT, TFT_GREEN);
+    int y = PLOT_OFFSET_Y + plotHeight + 3;
+    _display.fillRect(PLOT_OFFSET_X - 1, y, _evaluationRange, evaluationBarHeight, TFT_GREEN);
     for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
     {
         int x = PLOT_OFFSET_X + _evaluationRange - windspeedEvaluation.RangeStartIndex[i] - _windspeedDurationRange;
-        _display.fillRect(x, y, _windspeedDurationRange, EVALUATION_BAR_HEIGHT, TFT_RED);
-        _display.drawString(String(i + 1), x + 7, y + 4);
+        _display.fillRect(x, y, _windspeedDurationRange, evaluationBarHeight, TFT_RED);
+        _display.drawString(String(i + 1), x + 7, y + evaluationBarHeight/5);
     }
 }
