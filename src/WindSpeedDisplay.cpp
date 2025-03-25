@@ -26,6 +26,13 @@ void WindSpeedDisplay::setup()
     }
 }
 
+void WindSpeedDisplay::clear()
+{
+    _display.waitDisplay();
+    _display.clear();
+    _display.display();
+}
+
 void WindSpeedDisplay::draw(DrawType drawType) 
 {
     Serial.println();

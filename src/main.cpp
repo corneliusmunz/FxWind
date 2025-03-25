@@ -9,6 +9,8 @@
 #include <LittleFS.h>
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
+#include "StatusDisplay.h"
+#include "ConfigurationDisplay.h"
 
 
 // constants
@@ -21,8 +23,11 @@
 
 
 // global variables
+WiFiManager wifiManager;
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
+StatusDisplay statusDisplay;
+ConfigurationDisplay configurationDisplay;
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -35,6 +40,7 @@ const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
 int menuX = 0;
 int menuY = 1;
+bool menuChanged = false;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
 static constexpr const char *menu_y_items[3] = {"Status", "Plot", "Settings"};
@@ -261,7 +267,6 @@ void setupWifi()
 {
   WiFi.mode(WIFI_STA);
 
-  WiFiManager wifiManager;
   wifiManager.setHostname(hostname);
   bool res;
 
@@ -343,6 +348,8 @@ void setup(void)
   setupServer();
   setupSoundModule();
   windSpeedDisplay.setup();
+  statusDisplay.setup();
+  configurationDisplay.setup();
   
 }
 
@@ -356,6 +363,7 @@ void evaluateTouches() {
     if (t.wasFlicked())
     {
 
+      menuChanged = true;
       if (abs(t.distanceX()) > 30 && (abs(t.distanceX()) > abs(t.distanceY())) )
         {
           if (t.distanceX() > 0)
@@ -434,6 +442,26 @@ void loop(void)
   {
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
-    windSpeedDisplay.draw((DrawType)menuX);
+    if (menuY == 0) {
+      if (menuChanged) {
+        menuChanged = false;
+        statusDisplay.clear();
+      }
+      statusDisplay.draw(wifiManager.getWiFiHostname());
+    } else if (menuY == 2) {
+      if (menuChanged)
+      {
+        menuChanged = false;
+        statusDisplay.clear();
+      }
+      configurationDisplay.draw("Volume: 128");
+    }
+    } else {
+      if (menuChanged)
+      {
+        menuChanged = false;
+        statusDisplay.clear();
+      }
+      windSpeedDisplay.draw((DrawType)menuX);
+    }
   }
-}

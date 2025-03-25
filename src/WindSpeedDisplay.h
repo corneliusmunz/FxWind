@@ -31,6 +31,7 @@ class WindSpeedDisplay
 public:
     WindSpeedDisplay(uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20, WindSpeed *windSpeed = nullptr);
     void setup();
+    void clear();
     void draw(DrawType drawType);
 
 private:
