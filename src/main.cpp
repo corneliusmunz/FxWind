@@ -12,7 +12,7 @@
 
 
 // constants
-#define WINDSPEED_PIN 21
+#define WINDSPEED_PIN 19
 #define EVALUATION_RANGE 300
 #define SAMPLE_RATE 1000            // ms
 #define WINDSPEED_THRESHOLD 8       // m/s

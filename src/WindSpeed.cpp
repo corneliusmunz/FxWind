@@ -3,7 +3,7 @@
 WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange)
 {
     _sensorPin = sensorPin;
-    pinMode(_sensorPin, INPUT);
+    pinMode(_sensorPin, INPUT_PULLUP);
     _evaluationRange = evaluationRange;
     _windspeedThreshold = windspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
