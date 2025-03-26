@@ -154,6 +154,7 @@ void WindSpeed::evaluateWindspeed()
     for (size_t i = 0; i < 15; i++)
     {
         _windspeedEvaluation.RangeStartIndex[i] = exceededRangesIndex[i];
+        _windspeedEvaluation.RangeStopIndex[i] = exceededRangesIndex[i] + _windspeedDurationRange;
     }
 
     if (exceededRangesCounter < _numberOfRangesThreshold) {
@@ -241,23 +242,24 @@ String WindSpeed::getWindspeedEvaluationJson()
     jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
     jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
 
-    JsonArray evaluationArray = jsonDocument["evaluationArray"].to<JsonArray>();
+    for (size_t i = 0; i < _evaluationRange; i++)
+    {
+        JsonObject dataArray = jsonDocument["data"].createNestedObject();
+        dataArray["x"] = i;
+        dataArray["y"] = _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f;
+    }
 
-    // if (windspeedEvaluation.NumberOfExceededRanges > 0)
-    // for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
-    // {
-    //     for
-    //     RangeStartIndex[i]
-    // }
-    
-    evaluationArray.add(0);
-    evaluationArray.add(0);
-    evaluationArray.add(0);
-    evaluationArray.add(1);
-    evaluationArray.add(1);
-    evaluationArray.add(1);
-    evaluationArray.add(0);
-    evaluationArray.add(0);
+    if (windspeedEvaluation.NumberOfExceededRanges == 0) {
+        JsonObject exceededRangeObject = jsonDocument["exceededRanges"].createNestedObject();
+    }
+
+    for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
+    {
+        JsonObject exceededRangeObject = jsonDocument["exceededRanges"].createNestedObject();
+        exceededRangeObject["RangeIndex"] = i;
+        exceededRangeObject["StartIndex"] = windspeedEvaluation.RangeStartIndex[i];
+        exceededRangeObject["StopIndex"] = windspeedEvaluation.RangeStopIndex[i];
+    }
 
     String jsonString;
     jsonDocument.shrinkToFit();

@@ -14,6 +14,7 @@ struct WindspeedEvaluation
     float AverageWindspeed;
     int NumberOfExceededRanges;
     int RangeStartIndex[15];
+    int RangeStopIndex[15];
 };
 
 class WindSpeed
