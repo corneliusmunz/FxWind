@@ -236,29 +236,26 @@ String WindSpeed::getWindspeedEvaluationJson()
 
     JsonDocument jsonDocument;
 
-    jsonDocument["currentWindspeed"] = getCurrentWindspeed();
-    jsonDocument["minWindspeed"] = windspeedEvaluation.MinWindspeed;
-    jsonDocument["maxWindspeed"] = windspeedEvaluation.MaxWindspeed;
-    jsonDocument["averageWindspeed"] = windspeedEvaluation.AverageWindspeed;
-    jsonDocument["numberOfExceededRanges"] = windspeedEvaluation.NumberOfExceededRanges;
+    jsonDocument["Current"] = getCurrentWindspeed();
+    jsonDocument["Min"] = windspeedEvaluation.MinWindspeed;
+    jsonDocument["Max"] = windspeedEvaluation.MaxWindspeed;
+    jsonDocument["Average"] = windspeedEvaluation.AverageWindspeed;
 
+    JsonArray data = jsonDocument["Data"].to<JsonArray>();
     for (size_t i = 0; i < _evaluationRange; i++)
     {
-        JsonObject dataArray = jsonDocument["data"].createNestedObject();
-        dataArray["x"] = i;
-        dataArray["y"] = _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f;
+        JsonObject dataObject = data.add<JsonObject>();
+        dataObject["x"] = i;
+        dataObject["y"] = _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f;
     }
 
-    if (windspeedEvaluation.NumberOfExceededRanges == 0) {
-        JsonObject exceededRangeObject = jsonDocument["exceededRanges"].createNestedObject();
-    }
-
+    JsonArray exceededRanges = jsonDocument["ExceededRanges"].to<JsonArray>();
     for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
     {
-        JsonObject exceededRangeObject = jsonDocument["exceededRanges"].createNestedObject();
-        exceededRangeObject["RangeIndex"] = i;
-        exceededRangeObject["StartIndex"] = windspeedEvaluation.RangeStartIndex[i];
-        exceededRangeObject["StopIndex"] = windspeedEvaluation.RangeStopIndex[i];
+        JsonObject exceedingRange = exceededRanges.add<JsonObject>();
+        exceedingRange["RangeIndex"] = i;
+        exceedingRange["StartIndex"] = windspeedEvaluation.RangeStartIndex[i];
+        exceedingRange["StopIndex"] = windspeedEvaluation.RangeStopIndex[i];
     }
 
     String jsonString;
