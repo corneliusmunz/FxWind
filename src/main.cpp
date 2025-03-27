@@ -310,16 +310,11 @@ void setupServer()
             { request->send(LittleFS, "/index.html"); });
   server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", windSpeed.getWindspeedJson().c_str()); });
-  server.on("/statistic", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/evaluation", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", windSpeed.getWindspeedEvaluationJson().c_str()); });
-  server.on("/downloadtest", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SD, "/logs/2024-09-27_windspeed.csv", String(), true); });
   server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
             { handleDownloadRequest(request);});
-  server.on("/downloadsjson", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "application/json", getDownloadFilesJson().c_str()); });
-  // server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
-  //           { request->send(200, "text/html", printDirectory()); });
+
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 

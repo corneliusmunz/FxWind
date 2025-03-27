@@ -62,7 +62,13 @@
     </div>
 
     <div id="live-data" class="tab-content">
-        <canvas id="lineChart"></canvas>
+        <canvas id="chart"></canvas>
+            <div id="statistics" style="margin-top: 20px;">
+                <p><strong>Current:</strong> <span id="currentValue"></span> m/s</p>
+                <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
+                <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
+                <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
+            </div>
     </div>
 
     <div id="downloads" class="tab-content hidden">
@@ -107,32 +113,79 @@
         });
 
         // Chart.js - Line Chart
-        const ctx = document.getElementById('lineChart').getContext('2d');
+        const ctx = document.getElementById('chart').getContext('2d');
+
+    
         const lineChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [], // X-axis labels
+                labels: [], 
                 datasets: [{
-                    label: 'Live Data',
-                    data: [], // Y-axis data
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    label: 'Windspeed',
+                    data: [], 
+                    borderColor: 'rgba(50, 168, 82)',
                     borderWidth: 2,
-                    fill: false
-                }]
+                    fill: false,
+                    segment: {
+                        borderColor: (part) => {
+                            const prevValue = part.p0.parsed.y // start value
+                            const nextValue = part.p1.parsed.y // end value
+                            return prevValue >4 || nextValue > 4 ? "red" : "green" // return with a color by rule
+                        },
+                        backgroundColor: (part) => {
+                            const prevValue = part.p0.parsed.y // start value
+                            const nextValue = part.p1.parsed.y // end value
+                            return prevValue > 4 || nextValue > 4 ? "red" : "green" // return with a color by rule
+                        },
+                    }
+                },
+                {
+                        label: 'Exceeded Condition',
+                        data: ['ON', 'ON', 'OFF', 'ON', 'OFF', 'OFF', 'ON'],
+                        borderColor: 'rgba(145, 25, 25)',
+                        borderWidth: 2,
+                        stepped: true,
+                        yAxisID: 'y2',
+                    }]
             },
             options: {
+                elements: {
+                    point: {
+                        pointStyle: false
+                    }
+                },
                 responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Stacked scales',
+                    },
+                },
                 scales: {
                     x: {
                         title: {
                             display: true,
-                            text: 'Time'
-                        }
+                            text: 's'
+                        },
+                        type: 'linear',
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Value'
+                            text: 'm/s'
+                        },
+                        stack: 'windspeed',
+                        stackWeight: 2,
+                    },
+                    y2: {
+                        type: 'category',
+                        labels: ['YES', 'NO'],
+                        offset: true,
+                        position: 'left',
+                        stack: 'windspeed',
+                        stackWeight: 1,
+                        border: {
+                            color: 'rgba(145, 25, 25)'
                         }
                     }
                 }
@@ -144,16 +197,44 @@
             try {
                 const response = await fetch('http://192.168.178.95/windspeed'); // Replace with your REST API endpoint
                 const data = await response.json();
-                console.log('response:', data);
-                const time = new Date().toLocaleTimeString();
-                lineChart.data.labels.push(time);
-                lineChart.data.datasets[0].data.push(data.value); // Replace 'value' with the actual key
+
+                // map colors dependent on data values
+                const colors = data.map((y) => y > 4 ? 'red' : 'green');
+                lineChart.data.datasets[0].pointBorderColor = colors;
+                lineChart.data.datasets[0].pointBackgroundColor = colors;
+
+                // Map the data to subtract 300 from each x value
+                const mappedData = data.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
+
+                lineChart.data.datasets[0].data = mappedData;
+                lineChart.data.datasets[1].data = ['ON', 'ON', 'OFF', 'ON', 'OFF', 'OFF', 'ON'];
                 lineChart.update();
             } catch (error) {
                 console.error('Error fetching live data:', error);
             }
         }
         setInterval(fetchLiveData, 1000); // Fetch data every second
+
+        async function fetchStatistics() {
+                try {
+                    const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
+                    const data = await response.json();
+                    console.log(data);
+                    // Update statistics values in the DOM
+                    document.getElementById('currentValue').textContent = data.Current.toFixed(2);
+                    document.getElementById('minValue').textContent = data.Min.toFixed(2);
+                    document.getElementById('maxValue').textContent = data.Max.toFixed(2);
+                    document.getElementById('avgValue').textContent = data.Average.toFixed(2);
+                } catch (error) {
+                    console.error('Error fetching statistics:', error);
+                }
+            }
+
+            // Call fetchStatistics periodically
+            setInterval(fetchStatistics, 1000); 
 
         // Fetch downloadable files
         async function fetchDownloadableFiles() {

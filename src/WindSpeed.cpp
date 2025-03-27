@@ -158,7 +158,6 @@ void WindSpeed::evaluateWindspeed()
     }
 
     if (exceededRangesCounter < _numberOfRangesThreshold) {
-        //Serial.println("Reset isCallbackAlreadySent");
         _isCallbackAlreadySent = false;
     }
 
@@ -240,14 +239,6 @@ String WindSpeed::getWindspeedEvaluationJson()
     jsonDocument["Min"] = windspeedEvaluation.MinWindspeed;
     jsonDocument["Max"] = windspeedEvaluation.MaxWindspeed;
     jsonDocument["Average"] = windspeedEvaluation.AverageWindspeed;
-
-    JsonArray data = jsonDocument["Data"].to<JsonArray>();
-    for (size_t i = 0; i < _evaluationRange; i++)
-    {
-        JsonObject dataObject = data.add<JsonObject>();
-        dataObject["x"] = i;
-        dataObject["y"] = _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f;
-    }
 
     JsonArray exceededRanges = jsonDocument["ExceededRanges"].to<JsonArray>();
     for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
