@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F3X Windmeasurement</title>
+    <title>F3X Wind measurement</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -55,6 +55,7 @@
 </head>
 
 <body>
+    <h1>F3X Wind measurement</h1>
     <div class="tabs">
         <div class="tab active" data-tab="live-data">Live Data</div>
         <div class="tab" data-tab="downloads">Downloads</div>
@@ -62,17 +63,17 @@
     </div>
 
     <div id="live-data" class="tab-content">
+        <div id="exceedingStatus" style="margin-top: 20px; padding: 10px; color: white; text-align: center;">
+            OK
+        </div>
         <canvas id="chart"></canvas>
-            <div id="statistics" style="margin-top: 20px;">
-                <p><strong>Current:</strong> <span id="currentValue"></span> m/s</p>
-                <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
-                <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
-                <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
-                <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
-            </div>
-    <div id="exceedingStatus" style="margin-top: 20px; padding: 10px; color: white; text-align: center;">
-        Status: Monitoring
-    </div>
+        <div id="statistics" style="margin-top: 20px;">
+            <p><strong>Current:</strong> <span id="currentValue"></span> m/s</p>
+            <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
+            <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
+            <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
+            <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
+        </div>
     </div>
 
     <div id="downloads" class="tab-content hidden">
@@ -99,12 +100,14 @@
             </div>
             <button type="submit">Save</button>
         </form>
+            <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
+
     </div>
 
     <script>
 
         const evaluationThreshold = 4;
-        
+
         // Tab switching logic
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -122,13 +125,13 @@
         // Chart.js - Line Chart
         const ctx = document.getElementById('chart').getContext('2d');
 
-    
+
         const lineChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [], 
+                labels: [],
                 datasets: [
-                 
+
                     {
                         label: 'Windspeed',
                         data: [],
@@ -183,7 +186,7 @@
                     },
                     y: {
                         type: 'category',
-                        labels: ['YES', 'NO'],
+                        labels: ['NOT OK', 'OK'],
                         offset: true,
                         position: 'left',
                         stack: 'windspeed',
@@ -227,68 +230,68 @@
         setInterval(fetchLiveData, 1000); // Fetch data every second
 
         async function fetchStatistics() {
-                try {
-                    const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
-                    const data = await response.json();
-                    
-                    // Update statistics values in the DOM
-                    document.getElementById('currentValue').textContent = data.Current.toFixed(2);
-                    document.getElementById('minValue').textContent = data.Min.toFixed(2);
-                    document.getElementById('maxValue').textContent = data.Max.toFixed(2);
-                    document.getElementById('avgValue').textContent = data.Average.toFixed(2);
-                    document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
+            try {
+                const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
+                const data = await response.json();
 
-                    // Update background color based on the number of exceeding ranges
-                    const exceedingStatusDiv = document.getElementById('exceedingStatus');
-                    if (data.ExceededRanges.length >= 3) {
-                        exceedingStatusDiv.style.backgroundColor = 'red';
-                        exceedingStatusDiv.textContent = 'Status: Critical';
-                    } else if (data.ExceededRanges.length > 0) {
-                        exceedingStatusDiv.style.backgroundColor = 'orange';
-                        exceedingStatusDiv.textContent = 'Status: Warning';
-                    } else {
-                        exceedingStatusDiv.style.backgroundColor = 'green';
-                        exceedingStatusDiv.textContent = 'Status: Normal';
-                    }
+                // Update statistics values in the DOM
+                document.getElementById('currentValue').textContent = data.Current.toFixed(2);
+                document.getElementById('minValue').textContent = data.Min.toFixed(2);
+                document.getElementById('maxValue').textContent = data.Max.toFixed(2);
+                document.getElementById('avgValue').textContent = data.Average.toFixed(2);
+                document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
 
-                    var evaluationRanges = [];
-                    for (let index = 0; index < 300; index++) {
-                        var point = { x: index, y: 'NO' };
-                        evaluationRanges.push(point);
-                    }
-
-                    if (data.ExceededRanges.length > 0) {
-                        var exceedingRanges = [];
-                        data.ExceededRanges.forEach(range => {
-                            range.StartIndex = range.StartIndex - 2*(range.StartIndex - 150);
-                            range.StopIndex = range.StopIndex - 2*(range.StopIndex - 150);
-                            if (range.StartIndex > range.StopIndex) {
-                                var tmp = range.StartIndex;
-                                range.StartIndex = range.StopIndex;
-                                range.StopIndex = tmp;
-                            }
-                            for (let index = range.StartIndex; index < range.StopIndex; index++) {
-                                var point = { x: index, y: 'YES' };
-                                exceedingRanges.push(point);
-                            }
-                        });
-                        evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
-                    }
-
-
-                    const evaluationRangesMappedData = evaluationRanges.map(point => ({
-                        x: point.x - 300,
-                        y: point.y
-                    }));
-                    lineChart.data.datasets[1].data = evaluationRangesMappedData;
-                    lineChart.update();
-
-                } catch (error) {
-                    console.error('Error fetching statistics:', error);
+                // Update background color based on the number of exceeding ranges
+                const exceedingStatusDiv = document.getElementById('exceedingStatus');
+                if (data.ExceededRanges.length >= 3) {
+                    exceedingStatusDiv.style.backgroundColor = 'red';
+                    exceedingStatusDiv.textContent = 'NOT OK';
+                } else if (data.ExceededRanges.length > 0) {
+                    exceedingStatusDiv.style.backgroundColor = 'orange';
+                    exceedingStatusDiv.textContent = 'WARNING';
+                } else {
+                    exceedingStatusDiv.style.backgroundColor = 'green';
+                    exceedingStatusDiv.textContent = 'Status: Normal';
                 }
-            }
 
-            setInterval(fetchStatistics, 1000); 
+                var evaluationRanges = [];
+                for (let index = 0; index < 300; index++) {
+                    var point = { x: index, y: 'OK' };
+                    evaluationRanges.push(point);
+                }
+
+                if (data.ExceededRanges.length > 0) {
+                    var exceedingRanges = [];
+                    data.ExceededRanges.forEach(range => {
+                        range.StartIndex = range.StartIndex - 2 * (range.StartIndex - 150);
+                        range.StopIndex = range.StopIndex - 2 * (range.StopIndex - 150);
+                        if (range.StartIndex > range.StopIndex) {
+                            var tmp = range.StartIndex;
+                            range.StartIndex = range.StopIndex;
+                            range.StopIndex = tmp;
+                        }
+                        for (let index = range.StartIndex; index < range.StopIndex; index++) {
+                            var point = { x: index, y: 'NOT OK' };
+                            exceedingRanges.push(point);
+                        }
+                    });
+                    evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
+                }
+
+
+                const evaluationRangesMappedData = evaluationRanges.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
+                lineChart.data.datasets[1].data = evaluationRangesMappedData;
+                lineChart.update();
+
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        setInterval(fetchStatistics, 1000);
 
         // Fetch downloadable files
         async function fetchDownloadableFiles() {
@@ -311,9 +314,9 @@
                 const thead = document.createElement('thead');
                 thead.innerHTML = `
       <tr>
-        <th style="border: 1px solid #ccc; padding: 8px;">Date</th>
-        <th style="border: 1px solid #ccc; padding: 8px;">Filename</th>
-        <th style="border: 1px solid #ccc; padding: 8px;">Filesize</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Date</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filename</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filesize</th>
       </tr>
     `;
                 table.appendChild(thead);
@@ -323,11 +326,11 @@
                 files.forEach(file => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-        <td style="border: 1px solid #ccc; padding: 8px;">${file.Date}</td>
-        <td style="border: 1px solid #ccc; padding: 8px;">
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Date}</td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
           <a href="http://192.168.178.95/downloads?filename=${file.Filename}" download>${file.Filename}</a>
         </td>
-        <td style="border: 1px solid #ccc; padding: 8px;">${file.Filesize}</td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Filesize}</td>
       `;
                     tbody.appendChild(row);
                 });
