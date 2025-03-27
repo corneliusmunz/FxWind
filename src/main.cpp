@@ -133,9 +133,10 @@ String getDownloadFilesJson() {
           fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
 
         JsonObject arrayDocument = jsonDocument.add<JsonObject>();
-        arrayDocument["filename"] = String(file.name());
-        arrayDocument["filesize"] = fsize;
-        arrayDocument["downloadUrl"] = "./downloads?filename=" + String(file.name());
+        arrayDocument["Date"] = String(file.name()).substring(0, 10);
+        arrayDocument["Filename"] = String(file.name());
+        arrayDocument["Filesize"] = fsize;
+        arrayDocument["DownloadUrl"] = "/downloads?filename=" + String(file.name());
       }
       file.close();
       file = logDirectory.openNextFile();
@@ -206,6 +207,14 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
   Serial.print("Method: ");
   Serial.println(request->method());
 
+  int headers = request->headers();
+  int i;
+  for (i = 0; i < headers; i++)
+  {
+    AsyncWebHeader *h = request->getHeader(i);
+    Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+  }
+
   Serial.println("Params: ");
   for (size_t i = 0; i < request->params(); i++)
   {
@@ -228,13 +237,12 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
     Serial.println(parameter->value());
     String filename = request->getParam("filename")->value();
     Serial.println("Download Filename: " + filename);
-    // AsyncWebServerResponse *response = request->beginResponse(SD, "/logs/" + filename, String(), true);
     request->send(SD, "/logs/" + filename, String(), true);
     return;
   }
   else
   {
-    request->send(200, "text/html", printDirectory());
+    request->send_P(200, "application/json", getDownloadFilesJson().c_str());
   }
 }
 

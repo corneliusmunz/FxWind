@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webpage with Tabs</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            border: 1px solid #ccc;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tabs">
+        <div class="tab active" data-tab="live-data">Live Data</div>
+        <div class="tab" data-tab="downloads">Downloads</div>
+        <div class="tab" data-tab="settings">Settings</div>
+    </div>
+
+    <div id="live-data" class="tab-content">
+        <canvas id="lineChart"></canvas>
+    </div>
+
+    <div id="downloads" class="tab-content hidden">
+        <ul id="fileList"></ul>
+    </div>
+
+    <div id="settings" class="tab-content hidden">
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="threshold">Threshold</label>
+                <input type="number" id="threshold" name="threshold">
+            </div>
+            <div class="form-group">
+                <label for="volume">Volume</label>
+                <input type="number" id="volume" name="volume">
+            </div>
+            <div class="form-group">
+                <label for="hostname">Hostname</label>
+                <input type="text" id="hostname" name="hostname">
+            </div>
+            <div class="form-group">
+                <label for="calibrationvalue">Calibration Value</label>
+                <input type="number" id="calibrationvalue" name="calibrationvalue">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+    </div>
+
+    <script>
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                tabContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab).classList.remove('hidden');
+            });
+        });
+
+        // Chart.js - Line Chart
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // X-axis labels
+                datasets: [{
+                    label: 'Live Data',
+                    data: [], // Y-axis data
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Fetch live data from REST API
+        async function fetchLiveData() {
+            try {
+                const response = await fetch('http://192.168.178.95/windspeed'); // Replace with your REST API endpoint
+                const data = await response.json();
+                console.log('response:', data);
+                const time = new Date().toLocaleTimeString();
+                lineChart.data.labels.push(time);
+                lineChart.data.datasets[0].data.push(data.value); // Replace 'value' with the actual key
+                lineChart.update();
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+            }
+        }
+        setInterval(fetchLiveData, 1000); // Fetch data every second
+
+        // Fetch downloadable files
+        async function fetchDownloadableFiles() {
+            try {
+                const response = await fetch('http://192.168.178.95/downloads'); // Replace with your REST API endpoint
+                const files = await response.json();
+
+                // Sort files by descending date
+                files.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                // Create table structure
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                // Add table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+      <tr>
+        <th style="border: 1px solid #ccc; padding: 8px;">Date</th>
+        <th style="border: 1px solid #ccc; padding: 8px;">Filename</th>
+        <th style="border: 1px solid #ccc; padding: 8px;">Filesize</th>
+      </tr>
+    `;
+                table.appendChild(thead);
+
+                // Add table body
+                const tbody = document.createElement('tbody');
+                files.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+        <td style="border: 1px solid #ccc; padding: 8px;">${file.Date}</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">
+          <a href="http://192.168.178.95/downloads?filename=${file.Filename}" download>${file.Filename}</a>
+        </td>
+        <td style="border: 1px solid #ccc; padding: 8px;">${file.Filesize}</td>
+      `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+
+                // Append table to fileList container
+                fileList.appendChild(table);
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+        fetchDownloadableFiles();
+
+        // Handle settings form submission
+        document.getElementById('settingsForm').addEventListener('submit', event => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const settings = Object.fromEntries(formData.entries());
+            console.log('Settings saved:', settings);
+            // You can send the settings to your backend here
+        });
+    </script>
+</body>
+
+</html>
