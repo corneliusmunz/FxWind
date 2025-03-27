@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webpage with Tabs</title>
+    <title>F3X Windmeasurement</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -68,6 +68,7 @@
                 <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
                 <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
                 <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
+                <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
             </div>
     </div>
 
@@ -98,6 +99,9 @@
     </div>
 
     <script>
+
+        const evaluationThreshold = 4;
+        
         // Tab switching logic
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -120,29 +124,30 @@
             type: 'line',
             data: {
                 labels: [], 
-                datasets: [{
-                    label: 'Windspeed',
-                    data: [], 
-                    borderColor: 'rgba(50, 168, 82)',
-                    borderWidth: 2,
-                    fill: false,
-                    segment: {
-                        borderColor: (part) => {
-                            const prevValue = part.p0.parsed.y // start value
-                            const nextValue = part.p1.parsed.y // end value
-                            return prevValue >4 || nextValue > 4 ? "red" : "green" // return with a color by rule
-                        },
-                        backgroundColor: (part) => {
-                            const prevValue = part.p0.parsed.y // start value
-                            const nextValue = part.p1.parsed.y // end value
-                            return prevValue > 4 || nextValue > 4 ? "red" : "green" // return with a color by rule
-                        },
-                    }
-                },
-                {
+                datasets: [
+                 
+                    {
+                        label: 'Windspeed',
+                        data: [],
+                        borderColor: 'green',
+                        borderWidth: 2,
+                        fill: false,
+                        segment: {
+                            borderColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                            backgroundColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                        }
+                    }, {
                         label: 'Exceeded Condition',
-                        data: ['ON', 'ON', 'OFF', 'ON', 'OFF', 'OFF', 'ON'],
-                        borderColor: 'rgba(145, 25, 25)',
+                        data: [],
+                        borderColor: 'red',
                         borderWidth: 2,
                         stepped: true,
                         yAxisID: 'y2',
@@ -158,8 +163,11 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Stacked scales',
+                        text: 'Windspeed measurement [m/s] in the last 300s',
                     },
+                    legend: {
+                        position: 'bottom'
+                    }
                 },
                 scales: {
                     x: {
@@ -175,7 +183,7 @@
                             text: 'm/s'
                         },
                         stack: 'windspeed',
-                        stackWeight: 2,
+                        stackWeight: 3,
                     },
                     y2: {
                         type: 'category',
@@ -185,7 +193,7 @@
                         stack: 'windspeed',
                         stackWeight: 1,
                         border: {
-                            color: 'rgba(145, 25, 25)'
+                            color: 'red'
                         }
                     }
                 }
@@ -199,7 +207,7 @@
                 const data = await response.json();
 
                 // map colors dependent on data values
-                const colors = data.map((y) => y > 4 ? 'red' : 'green');
+                const colors = data.map((y) => y > evaluationThreshold ? 'red' : 'green');
                 lineChart.data.datasets[0].pointBorderColor = colors;
                 lineChart.data.datasets[0].pointBackgroundColor = colors;
 
@@ -210,7 +218,6 @@
                 }));
 
                 lineChart.data.datasets[0].data = mappedData;
-                lineChart.data.datasets[1].data = ['ON', 'ON', 'OFF', 'ON', 'OFF', 'OFF', 'ON'];
                 lineChart.update();
             } catch (error) {
                 console.error('Error fetching live data:', error);
@@ -222,18 +229,52 @@
                 try {
                     const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
                     const data = await response.json();
-                    console.log(data);
+                    
                     // Update statistics values in the DOM
                     document.getElementById('currentValue').textContent = data.Current.toFixed(2);
                     document.getElementById('minValue').textContent = data.Min.toFixed(2);
                     document.getElementById('maxValue').textContent = data.Max.toFixed(2);
                     document.getElementById('avgValue').textContent = data.Average.toFixed(2);
+                    document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
+
+
+                    var evaluationRanges = [];
+                    for (let index = 0; index < 300; index++) {
+                        var point = { x: index, y: 'NO' };
+                        evaluationRanges.push(point);
+                    }
+
+                    if (data.ExceededRanges.length > 0) {
+                        var exceedingRanges = [];
+                        data.ExceededRanges.forEach(range => {
+                            range.StartIndex = range.StartIndex - 2*(range.StartIndex - 150);
+                            range.StopIndex = range.StopIndex - 2*(range.StopIndex - 150);
+                            if (range.StartIndex > range.StopIndex) {
+                                var tmp = range.StartIndex;
+                                range.StartIndex = range.StopIndex;
+                                range.StopIndex = tmp;
+                            }
+                            for (let index = range.StartIndex; index < range.StopIndex; index++) {
+                                var point = { x: index, y: 'YES' };
+                                exceedingRanges.push(point);
+                            }
+                        });
+                        evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
+                    }
+
+
+                    const evaluationRangesMappedData = evaluationRanges.map(point => ({
+                        x: point.x - 300,
+                        y: point.y
+                    }));
+                    lineChart.data.datasets[1].data = evaluationRangesMappedData;
+                    lineChart.update();
+
                 } catch (error) {
                     console.error('Error fetching statistics:', error);
                 }
             }
 
-            // Call fetchStatistics periodically
             setInterval(fetchStatistics, 1000); 
 
         // Fetch downloadable files
