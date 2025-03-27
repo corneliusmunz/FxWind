@@ -70,6 +70,9 @@
                 <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
                 <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
             </div>
+    <div id="exceedingStatus" style="margin-top: 20px; padding: 10px; color: white; text-align: center;">
+        Status: Monitoring
+    </div>
     </div>
 
     <div id="downloads" class="tab-content hidden">
@@ -132,6 +135,7 @@
                         borderColor: 'green',
                         borderWidth: 2,
                         fill: false,
+                        yAxisID: 'y2',
                         segment: {
                             borderColor: (part) => {
                                 const prevValue = part.p0.parsed.y // start value
@@ -150,7 +154,7 @@
                         borderColor: 'red',
                         borderWidth: 2,
                         stepped: true,
-                        yAxisID: 'y2',
+                        yAxisID: 'y',
                     }]
             },
             options: {
@@ -178,23 +182,20 @@
                         type: 'linear',
                     },
                     y: {
+                        type: 'category',
+                        labels: ['YES', 'NO'],
+                        offset: true,
+                        position: 'left',
+                        stack: 'windspeed',
+                        stackWeight: 1
+                    },
+                    y2: {
                         title: {
                             display: true,
                             text: 'm/s'
                         },
                         stack: 'windspeed',
                         stackWeight: 3,
-                    },
-                    y2: {
-                        type: 'category',
-                        labels: ['YES', 'NO'],
-                        offset: true,
-                        position: 'left',
-                        stack: 'windspeed',
-                        stackWeight: 1,
-                        border: {
-                            color: 'red'
-                        }
                     }
                 }
             }
@@ -237,6 +238,18 @@
                     document.getElementById('avgValue').textContent = data.Average.toFixed(2);
                     document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
 
+                    // Update background color based on the number of exceeding ranges
+                    const exceedingStatusDiv = document.getElementById('exceedingStatus');
+                    if (data.ExceededRanges.length >= 3) {
+                        exceedingStatusDiv.style.backgroundColor = 'red';
+                        exceedingStatusDiv.textContent = 'Status: Critical';
+                    } else if (data.ExceededRanges.length > 0) {
+                        exceedingStatusDiv.style.backgroundColor = 'orange';
+                        exceedingStatusDiv.textContent = 'Status: Warning';
+                    } else {
+                        exceedingStatusDiv.style.backgroundColor = 'green';
+                        exceedingStatusDiv.textContent = 'Status: Normal';
+                    }
 
                     var evaluationRanges = [];
                     for (let index = 0; index < 300; index++) {
