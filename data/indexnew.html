@@ -30,7 +30,7 @@
 
         .tab-content {
             border: 1px solid #ccc;
-            padding: 20px;
+            padding: 5px;
         }
 
         .hidden {
@@ -63,7 +63,7 @@
     </div>
 
     <div id="live-data" class="tab-content">
-        <div id="exceedingStatus" style="margin-top: 20px; padding: 10px; color: white; text-align: center;">
+        <div id="exceedingStatus" style="margin-top: 5px; padding: 5px; color: white; text-align: center;">
             OK
         </div>
         <canvas id="chart"></canvas>
@@ -353,6 +353,7 @@
                 console.log(settings);
                 // Populate the form fields with the fetched settings
                 document.getElementById('threshold').value = settings.Threshold || '';
+                evaluationThreshold = settings.Threshold;
                 document.getElementById('volume').value = settings.Volume || '';
                 document.getElementById('calibrationfactor').value = settings.CalibrationFactor || '';
             } catch (error) {
