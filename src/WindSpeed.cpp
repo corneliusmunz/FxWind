@@ -1,17 +1,25 @@
 #include "WindSpeed.h"
 
-WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange)
+WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
 {
     _sensorPin = sensorPin;
     pinMode(_sensorPin, INPUT_PULLUP);
     _evaluationRange = evaluationRange;
     _windspeedThreshold = windspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _calibrationFactor = calibrationFactor;
 }
 
-void WindSpeed::setup() 
+void WindSpeed::setup()
 {
     setupSDCard();
+}
+
+void WindSpeed::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
+{
+    _windspeedThreshold = windspeedThreshold;
+    _windspeedDurationRange = windspeedDurationRange;
+    _calibrationFactor = calibrationFactor;
 }
 
 void WindSpeed::setupSDCard()
@@ -72,14 +80,14 @@ void WindSpeed::interruptCallback()
 // windspeed in m/s
 void WindSpeed::calculateWindspeed(bool evaluate, bool log)
 {
-    float windspeed = ((float)(_counter-_lastCounter) / 20.0f * 1.75f * 1000 / _sampleRate);
+    float windspeed = ((float)(_counter - _lastCounter) / 20.0f * 1.75f * 1000 / _sampleRate);
     _lastCounter = _counter;
     updateWindspeedArray(windspeed);
-    if (evaluate) 
+    if (evaluate)
     {
         evaluateWindspeed();
     }
-    if (log) 
+    if (log)
     {
         logWindspeedToSDCard(SD);
     }
@@ -87,7 +95,7 @@ void WindSpeed::calculateWindspeed(bool evaluate, bool log)
 
 float WindSpeed::getCurrentWindspeed()
 {
-    return (float)_windspeedHistoryArray[0]/10.0f;
+    return (float)_windspeedHistoryArray[0] / 10.0f;
 }
 
 WindspeedEvaluation WindSpeed::getWindspeedEvaluation()
@@ -95,7 +103,7 @@ WindspeedEvaluation WindSpeed::getWindspeedEvaluation()
     return _windspeedEvaluation;
 }
 
-int WindSpeed::getWindSpeedHistoryArrayElement(int i) 
+int WindSpeed::getWindSpeedHistoryArrayElement(int i)
 {
     return _windspeedHistoryArray[i];
 }
@@ -157,15 +165,16 @@ void WindSpeed::evaluateWindspeed()
         _windspeedEvaluation.RangeStopIndex[i] = exceededRangesIndex[i] + _windspeedDurationRange;
     }
 
-    if (exceededRangesCounter < _numberOfRangesThreshold) {
+    if (exceededRangesCounter < _numberOfRangesThreshold)
+    {
         _isCallbackAlreadySent = false;
     }
 
-        if (exceededRangesCounter >= _numberOfRangesThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
-        {
-            _isCallbackAlreadySent = true;
-            _evaluationCallback();
-        }
+    if (exceededRangesCounter >= _numberOfRangesThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
+    {
+        _isCallbackAlreadySent = true;
+        _evaluationCallback();
+    }
 }
 
 String WindSpeed::getWindspeedString(bool addUnitSymbol)
@@ -272,7 +281,6 @@ String WindSpeed::getLogFileHeader()
 {
     return "Timestamp, Windspeed[m/s]";
 }
-
 
 void WindSpeed::updateWindspeedArray(float currentWindspeed)
 {

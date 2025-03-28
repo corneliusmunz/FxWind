@@ -91,22 +91,18 @@
                 <input type="number" id="volume" name="volume">
             </div>
             <div class="form-group">
-                <label for="hostname">Hostname</label>
-                <input type="text" id="hostname" name="hostname">
-            </div>
-            <div class="form-group">
-                <label for="calibrationvalue">Calibration Value</label>
-                <input type="number" id="calibrationvalue" name="calibrationvalue">
+                <label for="calibrationfactor">Calibration Value</label>
+                <input type="number" id="calibrationfactor" name="calibrationfactor">
             </div>
             <button type="submit">Save</button>
         </form>
-            <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
+        <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
 
     </div>
 
     <script>
 
-        const evaluationThreshold = 4;
+        var evaluationThreshold = 4;
 
         // Tab switching logic
         const tabs = document.querySelectorAll('.tab');
@@ -119,6 +115,11 @@
 
                 tabContents.forEach(content => content.classList.add('hidden'));
                 document.getElementById(tab.dataset.tab).classList.remove('hidden');
+
+                // Fetch settings only when the "Settings" tab becomes active
+                if (tab.dataset.tab === 'settings') {
+                    fetchSettings();
+                }
             });
         });
 
@@ -278,7 +279,6 @@
                     evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
                 }
 
-
                 const evaluationRangesMappedData = evaluationRanges.map(point => ({
                     x: point.x - 300,
                     y: point.y
@@ -343,6 +343,24 @@
             }
         }
         fetchDownloadableFiles();
+
+        // Fetch settings from REST API and populate the form
+        async function fetchSettings() {
+            try {
+                const response = await fetch('http://192.168.178.95/settings'); // Replace with your REST API endpoint
+                const settings = await response.json();
+
+                console.log(settings);
+                // Populate the form fields with the fetched settings
+                document.getElementById('threshold').value = settings.Threshold || '';
+                document.getElementById('volume').value = settings.Volume || '';
+                document.getElementById('calibrationfactor').value = settings.CalibrationFactor || '';
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchSettings);
 
         // Handle settings form submission
         document.getElementById('settingsForm').addEventListener('submit', event => {

@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "F3XWind",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

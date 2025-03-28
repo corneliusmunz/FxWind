@@ -1,0 +1,20 @@
+meta {
+  name: SAVE Settings
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://{{hostname}}/settings
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "Volume": 128,
+    "Threshold": 4,
+    "CalibrationValue": 1,
+    "DurationRange": 20
+  }
+}

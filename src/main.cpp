@@ -10,20 +10,29 @@
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
 
-
 // constants
 #define WINDSPEED_PIN 19
 #define EVALUATION_RANGE 300
 #define SAMPLE_RATE 1000            // ms
-#define WINDSPEED_THRESHOLD 8       // m/s
+#define WINDSPEED_THRESHOLD 4       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
 #define NTP_SYNC_INTERVAL 600
+#define VOLUME 128
 
+// structs, enums
+struct Settings
+{
+  int Volume;
+  int CalibrationFactor;
+  int Threshold;
+  int DurationRange;
+};
 
 // global variables
 WiFiManager wifiManager;
-WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE);
-WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, &windSpeed);
+Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE};
+WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
+WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -100,55 +109,55 @@ time_t getNtpTime()
   return 0; // return 0 if unable to get the time
 }
 
-String getDownloadFilesJson() {
+String getDownloadFilesJson()
+{
 
-    JsonDocument jsonDocument;
+  JsonDocument jsonDocument;
 
-    File logDirectory = SD.open("/logs");
+  File logDirectory = SD.open("/logs");
 
-    if (!logDirectory)
+  if (!logDirectory)
+  {
+    return String();
+  }
+  if (!logDirectory.isDirectory())
+  {
+    return String();
+  }
+
+  File file = logDirectory.openNextFile();
+
+  while (file)
+  {
+    if (!file.isDirectory())
     {
-      return String();
+      int bytes = file.size();
+      String fsize = "";
+      if (bytes < 1024)
+        fsize = String(bytes) + " B";
+      else if (bytes < (1024 * 1024))
+        fsize = String(bytes / 1024.0, 3) + " KB";
+      else if (bytes < (1024 * 1024 * 1024))
+        fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
+      else
+        fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
+
+      JsonObject arrayDocument = jsonDocument.add<JsonObject>();
+      arrayDocument["Date"] = String(file.name()).substring(0, 10);
+      arrayDocument["Filename"] = String(file.name());
+      arrayDocument["Filesize"] = fsize;
+      arrayDocument["DownloadUrl"] = "/downloads?filename=" + String(file.name());
     }
-    if (!logDirectory.isDirectory())
-    {
-      return String();
-    }
-
-    File file = logDirectory.openNextFile();
-
-    while (file)
-    {
-      if (!file.isDirectory())
-      {
-        int bytes = file.size();
-        String fsize = "";
-        if (bytes < 1024)
-          fsize = String(bytes) + " B";
-        else if (bytes < (1024 * 1024))
-          fsize = String(bytes / 1024.0, 3) + " KB";
-        else if (bytes < (1024 * 1024 * 1024))
-          fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
-        else
-          fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
-
-        JsonObject arrayDocument = jsonDocument.add<JsonObject>();
-        arrayDocument["Date"] = String(file.name()).substring(0, 10);
-        arrayDocument["Filename"] = String(file.name());
-        arrayDocument["Filesize"] = fsize;
-        arrayDocument["DownloadUrl"] = "/downloads?filename=" + String(file.name());
-      }
-      file.close();
-      file = logDirectory.openNextFile();
-    }
-
     file.close();
-    String jsonString;
-    jsonDocument.shrinkToFit();
-    serializeJson(jsonDocument, jsonString);
+    file = logDirectory.openNextFile();
+  }
 
-    return jsonString;
-  
+  file.close();
+  String jsonString;
+  jsonDocument.shrinkToFit();
+  serializeJson(jsonDocument, jsonString);
+
+  return jsonString;
 }
 
 String printDirectory()
@@ -201,6 +210,33 @@ String printDirectory()
   return webpage;
 }
 
+void updateVolume()
+{
+  M5.Speaker.setVolume(settings.Volume);
+}
+
+String getSettingsJson()
+{
+  JsonDocument jsonDocument;
+
+  jsonDocument["Volume"] = settings.Volume;
+  jsonDocument["Threshold"] = settings.Threshold;
+  jsonDocument["CalibrationFactor"] = settings.CalibrationFactor;
+  jsonDocument["DurationRange"] = settings.DurationRange;
+
+  String jsonString;
+  jsonDocument.shrinkToFit();
+  serializeJson(jsonDocument, jsonString);
+  return jsonString;
+}
+
+void updateSettings()
+{
+  windSpeed.updateSettings(settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
+  windSpeedDisplay.updateSettings(settings.Threshold, settings.DurationRange);
+  updateVolume();
+}
+
 void handleDownloadRequest(AsyncWebServerRequest *request)
 {
 
@@ -246,7 +282,8 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
   }
 }
 
-void playSound(int duration = 2000) {
+void playSound(int duration = 2000)
+{
   M5.Speaker.tone(440, duration);
 }
 
@@ -260,7 +297,7 @@ void setupSoundModule()
   auto config = M5.config();
   config.external_speaker.atomic_spk = true;
   config.external_speaker.module_display = true;
-  M5.Speaker.setVolume(128);
+  M5.Speaker.setVolume(settings.Volume);
   M5.Speaker.begin();
 }
 
@@ -271,13 +308,16 @@ void setupWifi()
   wifiManager.setHostname(hostname);
   bool res;
 
-  //wifiManager.resetSettings();
+  // wifiManager.resetSettings();
 
   wifiManager.autoConnect("F3XWind");
 
-  if (!res) {
+  if (!res)
+  {
     Serial.println("Failed to connect");
-  } else {
+  }
+  else
+  {
     Serial.println("Connected successfull");
   }
 
@@ -294,14 +334,42 @@ void setupNtpTimeSyncProvider()
   setSyncInterval(NTP_SYNC_INTERVAL);
 }
 
-void evaluationCallback() {
-    playSound(5000);
+void evaluationCallback()
+{
+  playSound(5000);
 }
 
 void setupWindspeedIO()
 {
   windSpeed.setupInterruptCallback(interruptCallback);
   windSpeed.setupEvaluationCallback(&evaluationCallback);
+}
+
+// callback definition
+void parseMyPageBody(AsyncWebServerRequest *req, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  Serial.printf("len: %d, index: %d, total: %d\n", len, index, total);
+  DynamicJsonDocument bodyJSON(1024);
+  deserializeJson(bodyJSON, data, len);
+  int volume = bodyJSON["Volume"];
+  int threshold = bodyJSON["Threshold"];
+  int calibrationValue = bodyJSON["CalibrationValue"];
+  int durationRange = bodyJSON["DurationRange"];
+  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, DurationRange: %d\n", volume, threshold, calibrationValue, durationRange);
+  settings.Volume = volume;
+  settings.Threshold = threshold;
+  settings.CalibrationFactor = calibrationValue;
+  settings.DurationRange = durationRange;
+
+  updateSettings();
+
+  // rest of code
+}
+
+void handleSettings(AsyncWebServerRequest *request)
+{
+  Serial.println("handleSettings");
+  request->send_P(200, "application/json", getSettingsJson().c_str());
 }
 
 void setupServer()
@@ -313,8 +381,10 @@ void setupServer()
   server.on("/evaluation", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", windSpeed.getWindspeedEvaluationJson().c_str()); });
   server.on("/downloads", HTTP_GET, [](AsyncWebServerRequest *request)
-            { handleDownloadRequest(request);});
-
+            { handleDownloadRequest(request); });
+  server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "application/json", getSettingsJson().c_str()); });
+  server.on("/settings", HTTP_POST, handleSettings, nullptr, parseMyPageBody);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
@@ -330,8 +400,6 @@ void setupLittleFS()
     return;
   }
 }
-
-
 
 void setup(void)
 {

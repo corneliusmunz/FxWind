@@ -20,10 +20,11 @@ struct WindspeedEvaluation
 class WindSpeed
 {
 public:
-    WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20);
+    WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20, uint16_t calibrationFactor = 1);
     void setupInterruptCallback(void (*externalInterruptCallback)(void));
     void setupEvaluationCallback(std::function<void(void)> evaluationCallback);
     void setup();
+    void updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationValue);
     void interruptCallback();
     void calculateWindspeed(bool evaluate = true, bool log = false);
     float getCurrentWindspeed();
@@ -37,6 +38,7 @@ public:
 
 private:
     uint8_t _sensorPin;
+    uint16_t _calibrationFactor = 1;
     uint16_t _evaluationRange = 300;
     uint16_t _windspeedThreshold = 8;
     uint16_t _windspeedDurationRange = 20;
