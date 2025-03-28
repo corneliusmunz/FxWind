@@ -1,96 +1,377 @@
 <!DOCTYPE html>
-<html lang="en-US">
-
-<!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>F3Wind</title>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F3X Wind measurement</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url(https://fonts.googleapis.com/css?family=Roboto);
-
         body {
-            font-family: Roboto, sans-serif;
+            font-family: Arial, sans-serif;
         }
 
-        #chart {
-            max-width: 1024px;
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 
 <body>
+    <h1>F3X Wind measurement</h1>
+    <div class="tabs">
+        <div class="tab active" data-tab="live-data">Live Data</div>
+        <div class="tab" data-tab="downloads">Downloads</div>
+        <div class="tab" data-tab="settings">Settings</div>
+    </div>
 
-    <h1>Wind measurement</h1>
-    <div id="chart"></div>
+    <div id="live-data" class="tab-content">
+        <div id="exceedingStatus" style="margin-top: 5px; padding: 5px; color: white; text-align: center;">
+            OK
+        </div>
+        <canvas id="chart"></canvas>
+        <div id="statistics" style="margin-top: 20px;">
+            <p><strong>Current:</strong> <span id="currentValue"></span> m/s</p>
+            <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
+            <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
+            <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
+            <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
+        </div>
+    </div>
+
+    <div id="downloads" class="tab-content hidden">
+        <ul id="fileList"></ul>
+    </div>
+
+    <div id="settings" class="tab-content hidden">
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="threshold">Threshold</label>
+                <input type="number" id="threshold" name="threshold">
+            </div>
+            <div class="form-group">
+                <label for="volume">Volume</label>
+                <input type="number" id="volume" name="volume">
+            </div>
+            <div class="form-group">
+                <label for="calibrationfactor">Calibration Value</label>
+                <input type="number" id="calibrationfactor" name="calibrationfactor">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
+
+    </div>
+
     <script>
-        var options = {
-            series: [],
-            markers: {
-                size:5
-            },
-            chart: {
-                height: 350,
-                type: 'line',
-                toolbar : {
-                    show: false
+
+        var evaluationThreshold = 4;
+
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                tabContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab).classList.remove('hidden');
+
+                // Fetch settings only when the "Settings" tab becomes active
+                if (tab.dataset.tab === 'settings') {
+                    fetchSettings();
                 }
+            });
+        });
+
+        // Chart.js - Line Chart
+        const ctx = document.getElementById('chart').getContext('2d');
+
+
+        const lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+
+                    {
+                        label: 'Windspeed',
+                        data: [],
+                        borderColor: 'green',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y2',
+                        segment: {
+                            borderColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                            backgroundColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                        }
+                    }, {
+                        label: 'Exceeded Condition',
+                        data: [],
+                        borderColor: 'red',
+                        borderWidth: 2,
+                        stepped: true,
+                        yAxisID: 'y',
+                    }]
             },
-             zoom: {
-                enabled: false
-            },
-            tooltip: {
-                enabled: true
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'straight'
-            },
-            noData: {
-                text: 'Loading...'
-            },
-            title:{
-                text: 'Windspeed measurment [m/s] in the last 300s',
-                align: 'center'
-            },
-            grid: {
-                row: {
-                    colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
-                    opacity: 0.5
+            options: {
+                elements: {
+                    point: {
+                        pointStyle: false
+                    }
                 },
-            },
-            xaxis: {
-                lines: {
-                    show: false,
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Windspeed measurement [m/s] in the last 300s',
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 's'
+                        },
+                        type: 'linear',
+                    },
+                    y: {
+                        type: 'category',
+                        labels: ['NOT OK', 'OK'],
+                        offset: true,
+                        position: 'left',
+                        stack: 'windspeed',
+                        stackWeight: 1
+                    },
+                    y2: {
+                        title: {
+                            display: true,
+                            text: 'm/s'
+                        },
+                        stack: 'windspeed',
+                        stackWeight: 3,
+                    }
                 }
             }
-        };
+        });
 
-        var chart = new ApexCharts(document.querySelector("#chart"), options);
-        chart.render();
+        // Fetch live data from REST API
+        async function fetchLiveData() {
+            try {
+                const response = await fetch('http://192.168.178.95/windspeed'); // Replace with your REST API endpoint
+                const data = await response.json();
 
-        setInterval(function () {
-            axios({
-                method: 'GET',
-                url: '/windspeed',
+                // map colors dependent on data values
+                const colors = data.map((y) => y > evaluationThreshold ? 'red' : 'green');
+                lineChart.data.datasets[0].pointBorderColor = colors;
+                lineChart.data.datasets[0].pointBackgroundColor = colors;
 
-            }).then(function (response) {
-                chart.updateSeries([{
-                    name: 'Windspeed',
-                    data: response.data
-                }])
-            })
-        }, 1000);
+                // Map the data to subtract 300 from each x value
+                const mappedData = data.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
 
+                lineChart.data.datasets[0].data = mappedData;
+                lineChart.update();
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+            }
+        }
+        setInterval(fetchLiveData, 1000); // Fetch data every second
 
+        async function fetchStatistics() {
+            try {
+                const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
+                const data = await response.json();
+
+                // Update statistics values in the DOM
+                document.getElementById('currentValue').textContent = data.Current.toFixed(2);
+                document.getElementById('minValue').textContent = data.Min.toFixed(2);
+                document.getElementById('maxValue').textContent = data.Max.toFixed(2);
+                document.getElementById('avgValue').textContent = data.Average.toFixed(2);
+                document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
+
+                // Update background color based on the number of exceeding ranges
+                const exceedingStatusDiv = document.getElementById('exceedingStatus');
+                if (data.ExceededRanges.length >= 3) {
+                    exceedingStatusDiv.style.backgroundColor = 'red';
+                    exceedingStatusDiv.textContent = 'NOT OK';
+                } else if (data.ExceededRanges.length > 0) {
+                    exceedingStatusDiv.style.backgroundColor = 'orange';
+                    exceedingStatusDiv.textContent = 'WARNING';
+                } else {
+                    exceedingStatusDiv.style.backgroundColor = 'green';
+                    exceedingStatusDiv.textContent = 'Status: Normal';
+                }
+
+                var evaluationRanges = [];
+                for (let index = 0; index < 300; index++) {
+                    var point = { x: index, y: 'OK' };
+                    evaluationRanges.push(point);
+                }
+
+                if (data.ExceededRanges.length > 0) {
+                    var exceedingRanges = [];
+                    data.ExceededRanges.forEach(range => {
+                        range.StartIndex = range.StartIndex - 2 * (range.StartIndex - 150);
+                        range.StopIndex = range.StopIndex - 2 * (range.StopIndex - 150);
+                        if (range.StartIndex > range.StopIndex) {
+                            var tmp = range.StartIndex;
+                            range.StartIndex = range.StopIndex;
+                            range.StopIndex = tmp;
+                        }
+                        for (let index = range.StartIndex; index < range.StopIndex; index++) {
+                            var point = { x: index, y: 'NOT OK' };
+                            exceedingRanges.push(point);
+                        }
+                    });
+                    evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
+                }
+
+                const evaluationRangesMappedData = evaluationRanges.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
+                lineChart.data.datasets[1].data = evaluationRangesMappedData;
+                lineChart.update();
+
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        setInterval(fetchStatistics, 1000);
+
+        // Fetch downloadable files
+        async function fetchDownloadableFiles() {
+            try {
+                const response = await fetch('http://192.168.178.95/downloads'); // Replace with your REST API endpoint
+                const files = await response.json();
+
+                // Sort files by descending date
+                files.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                // Create table structure
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                // Add table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+      <tr>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Date</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filename</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filesize</th>
+      </tr>
+    `;
+                table.appendChild(thead);
+
+                // Add table body
+                const tbody = document.createElement('tbody');
+                files.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Date}</td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
+          <a href="http://192.168.178.95/downloads?filename=${file.Filename}" download>${file.Filename}</a>
+        </td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Filesize}</td>
+      `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+
+                // Append table to fileList container
+                fileList.appendChild(table);
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+        fetchDownloadableFiles();
+
+        // Fetch settings from REST API and populate the form
+        async function fetchSettings() {
+            try {
+                const response = await fetch('http://192.168.178.95/settings'); // Replace with your REST API endpoint
+                const settings = await response.json();
+
+                console.log(settings);
+                // Populate the form fields with the fetched settings
+                document.getElementById('threshold').value = settings.Threshold || '';
+                evaluationThreshold = settings.Threshold;
+                document.getElementById('volume').value = settings.Volume || '';
+                document.getElementById('calibrationfactor').value = settings.CalibrationFactor || '';
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchSettings);
+
+        // Handle settings form submission
+        document.getElementById('settingsForm').addEventListener('submit', event => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const settings = Object.fromEntries(formData.entries());
+            console.log('Settings saved:', settings);
+            // You can send the settings to your backend here
+        });
     </script>
-
 </body>
 
 </html>
