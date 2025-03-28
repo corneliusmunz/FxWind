@@ -53,7 +53,7 @@ private:
     void evaluateWindspeed();
     void updateWindspeedArray(float currentWindspeed);
     String getWindspeedEvaluationSingleString(float windspeedValue);
-    String getLogCsvRow(float windspeedValue, char separationChar = ',');
+    String getLogCsvRow(char separationChar = ',');
     String getLogFilePath();
     String getLogFileHeader();
     void appendLineToFile(fs::FS &fs, const char *path, const char *message);

@@ -195,7 +195,7 @@ void WindSpeed::logWindspeedToSDCard(fs::FS &fs)
     {
         writeLineToFile(fs, getLogFilePath().c_str(), getLogFileHeader().c_str());
     }
-    appendLineToFile(fs, getLogFilePath().c_str(), getLogCsvRow(getCurrentWindspeed()).c_str());
+    appendLineToFile(fs, getLogFilePath().c_str(), getLogCsvRow().c_str());
 }
 
 String WindSpeed::getWindspeedEvaluationString()
@@ -255,9 +255,9 @@ String WindSpeed::getWindspeedEvaluationJson()
     return jsonString;
 }
 
-String WindSpeed::getLogCsvRow(float windspeedValue, char separationChar)
+String WindSpeed::getLogCsvRow(char separationChar)
 {
-    return getTimestampString() + separationChar + getWindspeedString(windspeedValue);
+    return getTimestampString() + separationChar + getWindspeedString();
 }
 
 String WindSpeed::getLogFilePath()
