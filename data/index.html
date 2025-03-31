@@ -85,27 +85,27 @@
         <form id="settingsForm">
             <div class="form-group">
                 <label for="threshold">Threshold</label>
-                <input type="number" id="threshold" name="threshold">
+                <input type="number" id="threshold" name="threshold" placeholder="fai wind threshold 2..12 m/s" min="2" max="12">
             </div>
             <div class="form-group">
                 <label for="volume">Volume</label>
-                <input type="number" id="volume" name="volume">
+                <input type="number" id="volume" name="volume" placeholder="speaker volume 0..255" min="0" max="255">
             </div>
             <div class="form-group">
                 <label for="calibrationfactor">Calibration Value</label>
-                <input type="number" id="calibrationfactor" name="calibrationfactor">
+                <input type="number" id="calibrationfactor" name="calibrationfactor"  placeholder="calibration factor - currently not used" min="1" max="1">
             </div>
             <div class="form-group">
                 <label for="maximumChargeCurrentSetting">Maximum Charge current</label>
-                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting">
+                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting" placeholder="maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
             </div>
             <div class="form-group">
                 <label for="displayBrightnessSetting">Display Brightness</label>
-                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting">
+                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting" placeholder="display background brightness level 50..255" min="50" max="255">
             </div>
             <button type="submit">Save</button>
         </form>
-        <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
+        <!-- <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button> -->
 
     </div>
 
