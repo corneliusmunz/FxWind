@@ -11,6 +11,7 @@ WindSpeedDisplay::WindSpeedDisplay(uint16_t evaluationRange, uint16_t windspeedT
 
 void WindSpeedDisplay::setup()
 {
+    _display.setBrightness(255);
     _display.init();
     _display.startWrite();
     _display.fillScreen(TFT_BLACK);
@@ -26,10 +27,11 @@ void WindSpeedDisplay::setup()
     }
 }
 
-void WindSpeedDisplay::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange)
+void WindSpeedDisplay::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, int brightness)
 {
     _windspeedThreshold = windspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _display.setBrightness(brightness);
 }
 
 void WindSpeedDisplay::draw(DrawType drawType)
@@ -54,8 +56,8 @@ void WindSpeedDisplay::draw(DrawType drawType)
         drawNumberView();
         break;
 
-    case DrawType::STATISTIC:
-        drawStatisticView();
+    case DrawType::STATUS:
+        drawStatusView();
         break;
 
     default:
@@ -64,10 +66,10 @@ void WindSpeedDisplay::draw(DrawType drawType)
     }
 }
 
-void WindSpeedDisplay::drawStatisticView()
+void WindSpeedDisplay::drawStatusView()
 {
     _display.waitDisplay();
-    drawStatistic(_windSpeed->getWindspeedEvaluation());
+    drawStatus();
     _display.display();
 }
 
@@ -97,7 +99,7 @@ void WindSpeedDisplay::drawCombinedView()
     _display.display();
 }
 
-void WindSpeedDisplay::drawStatistic(WindspeedEvaluation windspeedEvaluation)
+void WindSpeedDisplay::drawStatus()
 {
     _display.setFont(&fonts::DejaVu18);
     int fontHeight = _display.fontHeight();
@@ -106,16 +108,15 @@ void WindSpeedDisplay::drawStatistic(WindspeedEvaluation windspeedEvaluation)
     int spacer = 10;
     int yPosDelta = fontHeight + 4;
 
-    _display.drawString("Date: " + _windSpeed->getTimestampString(), 1, yPos);
-    _display.drawString("Current: " + _windSpeed->getWindspeedString(false) + " m/s", 1, yPos + 1 * yPosDelta + 1 * spacer);
-    _display.drawString("Min (last 300s): " + String(windspeedEvaluation.MinWindspeed) + " m/s", 1, yPos + 2 * yPosDelta + 2 * spacer);
-    _display.drawString("Max (last 300s): " + String(windspeedEvaluation.MaxWindspeed) + " m/s", 1, yPos + 3 * yPosDelta + 2 * spacer);
-    _display.drawString("Average (last300s): " + String(windspeedEvaluation.AverageWindspeed) + " m/s", 1, yPos + 4 * yPosDelta + 2 * spacer);
-    _display.drawString("Min (today): " + String(windspeedEvaluation.MinWindspeed) + " m/s", 1, yPos + 5 * yPosDelta + 3 * spacer);
-    _display.drawString("Max (today): " + String(windspeedEvaluation.MaxWindspeed) + " m/s", 1, yPos + 6 * yPosDelta + 3 * spacer);
-    _display.drawString("Average (today): " + String(windspeedEvaluation.AverageWindspeed) + " m/s", 1, yPos + 7 * yPosDelta + 3 * spacer);
-    _display.drawString("Number of exceeded frames: " + String(windspeedEvaluation.NumberOfExceededRanges), 1, yPos + 8 * yPosDelta + 4 * spacer);
-}
+    _display.drawString("STATUS DISPLAY", 1, yPos);
+    _display.drawString("Date: " + _windSpeed->getTimestampString(), 1, yPos + 1 * yPosDelta + 1 * spacer);
+    _display.drawString("Battery Level: " + String(M5.Power.getBatteryLevel()) + " %", 1, yPos + 2 * yPosDelta + 2 * spacer);
+    _display.drawString("Power connected: " + String(M5.Power.Axp192.isACIN()), 1, yPos + 3 * yPosDelta + 2 * spacer);
+    _display.drawString("Charging: " + String(M5.Power.isCharging()), 1, yPos + 4 * yPosDelta + 2 * spacer);
+    _display.drawString("Current: " + String(M5.Power.getBatteryCurrent()) + " mA", 1, yPos + 5 * yPosDelta + 2 * spacer);
+    _display.drawString("Wifi IP: " + WiFi.localIP().toString(), 1, yPos + 6 * yPosDelta + 4 * spacer);
+    _display.drawString("Wifi RSSI: " + String(WiFi.RSSI()) + " dB", 1, yPos + 7 * yPosDelta + 4 * spacer);
+  }
 
 void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight)
 {

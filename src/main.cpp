@@ -26,11 +26,13 @@ struct Settings
   int CalibrationFactor;
   int Threshold;
   int DurationRange;
+  int DisplayBrightness;
+  int MaximumChargeCurrent;
 };
 
 // global variables
 WiFiManager wifiManager;
-Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE};
+Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, 255, 500};
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
 
@@ -223,6 +225,25 @@ String getSettingsJson()
   jsonDocument["Threshold"] = settings.Threshold;
   jsonDocument["CalibrationFactor"] = settings.CalibrationFactor;
   jsonDocument["DurationRange"] = settings.DurationRange;
+  jsonDocument["DisplayBrightness"] = settings.DisplayBrightness;
+  jsonDocument["MaximumChargeCurrent"] = settings.MaximumChargeCurrent;
+
+  String jsonString;
+  jsonDocument.shrinkToFit();
+  serializeJson(jsonDocument, jsonString);
+  return jsonString;
+}
+
+String getStatusJson()
+{
+  JsonDocument jsonDocument;
+
+  jsonDocument["BatteryLevel"] = M5.Power.getBatteryLevel();
+  jsonDocument["Current"] = M5.Power.getBatteryCurrent();
+  jsonDocument["IsPowerConnected"] = M5.Power.Axp192.isACIN();
+  jsonDocument["IsCharging"] = M5.Power.isCharging();
+  jsonDocument["WifiIpAddress"] = WiFi.localIP();
+  jsonDocument["WifiRSSI"] = WiFi.RSSI();
 
   String jsonString;
   jsonDocument.shrinkToFit();
@@ -233,8 +254,9 @@ String getSettingsJson()
 void updateSettings()
 {
   windSpeed.updateSettings(settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
-  windSpeedDisplay.updateSettings(settings.Threshold, settings.DurationRange);
+  windSpeedDisplay.updateSettings(settings.Threshold, settings.DurationRange, settings.DisplayBrightness);
   updateVolume();
+  M5.Power.Axp192.setChargeCurrent(settings.MaximumChargeCurrent);
 }
 
 void handleDownloadRequest(AsyncWebServerRequest *request)
@@ -348,22 +370,21 @@ void setupWindspeedIO()
 // callback definition
 void parseMyPageBody(AsyncWebServerRequest *req, uint8_t *data, size_t len, size_t index, size_t total)
 {
-  Serial.printf("len: %d, index: %d, total: %d\n", len, index, total);
   DynamicJsonDocument bodyJSON(1024);
   deserializeJson(bodyJSON, data, len);
   int volume = bodyJSON["Volume"];
   int threshold = bodyJSON["Threshold"];
   int calibrationValue = bodyJSON["CalibrationValue"];
-  int durationRange = bodyJSON["DurationRange"];
-  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, DurationRange: %d\n", volume, threshold, calibrationValue, durationRange);
+  int displayBrightness = bodyJSON["DisplayBrightness"];
+  int maximumChargeCurrent = bodyJSON["MaximumChargeCurrent"];
+  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", volume, threshold, calibrationValue, maximumChargeCurrent, displayBrightness);
   settings.Volume = volume;
   settings.Threshold = threshold;
   settings.CalibrationFactor = calibrationValue;
-  settings.DurationRange = durationRange;
+  settings.DisplayBrightness = displayBrightness;
+  settings.MaximumChargeCurrent = maximumChargeCurrent;
 
   updateSettings();
-
-  // rest of code
 }
 
 void handleSettings(AsyncWebServerRequest *request)
@@ -385,6 +406,8 @@ void setupServer()
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", getSettingsJson().c_str()); });
   server.on("/settings", HTTP_POST, handleSettings, nullptr, parseMyPageBody);
+  server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "application/json", getStatusJson().c_str()); });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
@@ -412,6 +435,7 @@ void setup(void)
   setupServer();
   setupSoundModule();
   windSpeedDisplay.setup();
+  M5.Power.setChargeCurrent(500);
 }
 
 void evaluateTouches()
@@ -473,5 +497,6 @@ void loop(void)
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw((DrawType)menuX);
+    Serial.printf("Level: %d, Voltage: %d, Current: %d, IsCharging:%d, ChargeCurrent: %.2f, isACin: %d \n", M5.Power.getBatteryLevel(), M5.Power.getBatteryVoltage(), M5.Power.getBatteryCurrent(), M5.Power.isCharging(), M5.Power.Axp192.getBatteryChargeCurrent(), M5.Power.Axp192.isACIN());
   }
 }

@@ -60,6 +60,7 @@
         <div class="tab active" data-tab="live-data">Live Data</div>
         <div class="tab" data-tab="downloads">Downloads</div>
         <div class="tab" data-tab="settings">Settings</div>
+        <div class="tab" data-tab="status">Status</div>
     </div>
 
     <div id="live-data" class="tab-content">
@@ -94,15 +95,37 @@
                 <label for="calibrationfactor">Calibration Value</label>
                 <input type="number" id="calibrationfactor" name="calibrationfactor">
             </div>
+            <div class="form-group">
+                <label for="maximumChargeCurrentSetting">Maximum Charge current</label>
+                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting">
+            </div>
+            <div class="form-group">
+                <label for="displayBrightnessSetting">Display Brightness</label>
+                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting">
+            </div>
             <button type="submit">Save</button>
         </form>
         <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button>
 
     </div>
 
+    <div id="status" class="tab-content">
+        <div id="status" style="margin-top: 20px;">
+            <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> %</p>
+            <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
+            <p><strong>Charging:</strong> <span id="isCharging"></span></p>
+            <p><strong>Current:</strong> <span id="deviceCurrent"></span> mA</p>
+            <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
+            <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> dB</p>
+        </div>
+    </div>
+
     <script>
 
         var evaluationThreshold = 4;
+        var fetchStatusIntervalId;
+        var fetchLiveDataIntervalId;
+        var fetchStatisticsIntervalId;
 
         // Tab switching logic
         const tabs = document.querySelectorAll('.tab');
@@ -119,6 +142,24 @@
                 // Fetch settings only when the "Settings" tab becomes active
                 if (tab.dataset.tab === 'settings') {
                     fetchSettings();
+                    clearInterval(fetchStatusIntervalId);
+                }
+                else if (tab.dataset.tab === 'status') {
+                    fetchStatus();
+                    fetchStatusIntervalId = setInterval(fetchStatus, 1000);
+                    clearInterval(fetchLiveDataIntervalId);
+                    clearInterval(fetchStatisticsIntervalId);
+
+                }
+                else if (tab.dataset.tab === 'downloads') {
+                    fetchDownloadableFiles();
+                }
+                else if (tab.dataset.tab === 'live-data') {
+                    fetchLiveData();
+                    fetchStatistics();
+                    fetchLiveDataIntervalId = setInterval(fetchLiveData, 1000);
+                    fetchStatisticsIntervalId = setInterval(fetchStatistics, 1000);
+                    clearInterval(fetchStatusIntervalId);
                 }
             });
         });
@@ -208,7 +249,7 @@
         // Fetch live data from REST API
         async function fetchLiveData() {
             try {
-                const response = await fetch('http://192.168.178.95/windspeed'); // Replace with your REST API endpoint
+                const response = await fetch('./windspeed'); // Replace with your REST API endpoint
                 const data = await response.json();
 
                 // map colors dependent on data values
@@ -228,11 +269,10 @@
                 console.error('Error fetching live data:', error);
             }
         }
-        setInterval(fetchLiveData, 1000); // Fetch data every second
 
         async function fetchStatistics() {
             try {
-                const response = await fetch('http://192.168.178.95/evaluation'); // Replace with your REST API endpoint
+                const response = await fetch('./evaluation'); // Replace with your REST API endpoint
                 const data = await response.json();
 
                 // Update statistics values in the DOM
@@ -291,12 +331,11 @@
             }
         }
 
-        setInterval(fetchStatistics, 1000);
 
         // Fetch downloadable files
         async function fetchDownloadableFiles() {
             try {
-                const response = await fetch('http://192.168.178.95/downloads'); // Replace with your REST API endpoint
+                const response = await fetch('./downloads'); // Replace with your REST API endpoint
                 const files = await response.json();
 
                 // Sort files by descending date
@@ -342,34 +381,90 @@
                 console.error('Error fetching files:', error);
             }
         }
-        fetchDownloadableFiles();
 
         // Fetch settings from REST API and populate the form
         async function fetchSettings() {
             try {
-                const response = await fetch('http://192.168.178.95/settings'); // Replace with your REST API endpoint
+                const response = await fetch('./settings'); // Replace with your REST API endpoint
                 const settings = await response.json();
-
-                console.log(settings);
-                // Populate the form fields with the fetched settings
                 document.getElementById('threshold').value = settings.Threshold || '';
                 evaluationThreshold = settings.Threshold;
                 document.getElementById('volume').value = settings.Volume || '';
                 document.getElementById('calibrationfactor').value = settings.CalibrationFactor || '';
+                document.getElementById('maximumChargeCurrentSetting').value = settings.MaximumChargeCurrent || 1;
+                document.getElementById('displayBrightnessSetting').value = settings.DisplayBrightness || 2;
             } catch (error) {
                 console.error('Error fetching settings:', error);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', fetchSettings);
+        async function fetchStatus() {
+            try {
+                const response = await fetch('./status'); // Replace with your REST API endpoint
+                const data = await response.json();
+
+                // Update statistics values in the DOM
+                document.getElementById('batteryLevel').textContent = data.BatteryLevel.toFixed(0);
+                document.getElementById('deviceCurrent').textContent = data.Current.toFixed(0);
+                document.getElementById('isPowerConnected').textContent = data.IsPowerConnected;
+                document.getElementById('isCharging').textContent = data.IsCharging;
+                document.getElementById('wifiIpAddress').textContent = data.WifiIpAddress;
+                document.getElementById('wifiRssi').textContent = data.WifiRSSI.toFixed(0);
+            } catch (error) {
+                console.error('Error fetching status:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch settings and populate the settings form
+            fetchSettings();
+
+            // Fetch live data and statistics for the "Live Data" tab
+            fetchLiveData();
+            fetchStatistics();
+            fetchLiveDataIntervalId = setInterval(fetchLiveData, 1000);
+            fetchStatisticsIntervalId = setInterval(fetchStatistics, 1000);
+
+            // Fetch downloadable files for the "Downloads" tab
+            fetchDownloadableFiles();
+
+            // Set the default active tab to "Live Data"
+            document.querySelector('.tab[data-tab="live-data"]').classList.add('active');
+            document.getElementById('live-data').classList.remove('hidden');
+        });
 
         // Handle settings form submission
-        document.getElementById('settingsForm').addEventListener('submit', event => {
+        document.getElementById('settingsForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const formData = new FormData(event.target);
             const settings = Object.fromEntries(formData.entries());
-            console.log('Settings saved:', settings);
-            // You can send the settings to your backend here
+            var jsonSettings = {};
+            jsonSettings["Volume"] = settings.volume;
+            jsonSettings["Threshold"] = settings.threshold;
+            jsonSettings["CalibrationValue"] = settings.calibrationfactor;
+            jsonSettings["MaximumChargeCurrent"] = settings.maximumChargeCurrentSetting;
+            jsonSettings["DisplayBrightness"] = settings.displayBrightnessSetting;
+
+            
+            try {
+                // Send the form data as a POST request to the /settings endpoint
+                const response = await fetch('./settings', {
+                    method: 'POST',
+                    body: JSON.stringify(jsonSettings),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Settings successfully updated');
+                    evaluationThreshold = settings.threshold;
+                } else {
+                    console.error('Failed to update settings:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error sending settings:', error);
+            }
         });
     </script>
 </body>

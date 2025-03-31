@@ -5,13 +5,14 @@
 #include "WindSpeed.h"
 #include <M5GFX.h>
 #include <M5Unified.h>
+#include <WiFiManager.h>
 
 enum struct DrawType
 {
     COMBINED = 0,
     PLOT = 1,
     NUMBER = 2,
-    STATISTIC = 3
+    STATUS = 3
 };
 
 #define PLOT_OFFSET_X 20
@@ -31,7 +32,7 @@ class WindSpeedDisplay
 public:
     WindSpeedDisplay(uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20, WindSpeed *windSpeed = nullptr);
     void setup();
-    void updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange);
+    void updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, int brightness);
     void draw(DrawType drawType);
 
 private:
@@ -42,12 +43,12 @@ private:
     WindSpeed *_windSpeed;
     DrawType _currentDrawType;
 
-    void drawStatisticView();
+    void drawStatusView();
     void drawPlotView();
     void drawCombinedView();
     void drawNumberView();
 
-    void drawStatistic(WindspeedEvaluation windspeedEvaluation);
+    void drawStatus();
     void drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight);
     void drawBarPlot(int plotHeight);
     void drawEvaluationBars(WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight);
