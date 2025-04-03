@@ -266,7 +266,7 @@ String WindSpeed::getWindspeedEvaluationJson()
 
 String WindSpeed::getLogCsvRow(char separationChar)
 {
-    return getTimestampString() + separationChar + getWindspeedString();
+    return getTimestampString() + separationChar + getWindspeedString() + separationChar + String(M5.Power.getBatteryLevel()) + separationChar + String(M5.Power.getBatteryVoltage());
 }
 
 String WindSpeed::getLogFilePath()
@@ -279,7 +279,7 @@ String WindSpeed::getLogFilePath()
 
 String WindSpeed::getLogFileHeader()
 {
-    return "Timestamp, Windspeed[m/s]";
+    return "Timestamp, Windspeed[m/s], BatteryLevel[%], BatteryVoltage[mV]";
 }
 
 void WindSpeed::updateWindspeedArray(float currentWindspeed)

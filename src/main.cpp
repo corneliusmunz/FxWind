@@ -481,6 +481,10 @@ void evaluateTouches()
     {
       stopSound();
     }
+
+    if (touchDetail.wasDragged()) {
+      M5.Power.powerOff();
+    }
   }
 }
 
