@@ -483,7 +483,12 @@ void evaluateTouches()
     }
 
     if (touchDetail.wasDragged()) {
-      M5.Power.powerOff();
+      esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); // gpio39 == touch INT
+      delay(100);
+      M5.Display.fillScreen(TFT_BLACK);
+      M5.Display.sleep();
+      M5.Display.waitDisplay();
+      esp_deep_sleep_start();
     }
   }
 }
