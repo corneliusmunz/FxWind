@@ -187,6 +187,12 @@ For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-cod
 ### CAD, STL Files 
 
 
+## Assembly
+
+You can find the assembly instructions on the following link
+[Assembly Instructions](docs/assembly.md)
+
+
 ## Ideas and ToDos
 
 * QR Code generation to get Link to webserver

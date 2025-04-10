@@ -36,4 +36,20 @@ Start um 08:55 Uhr mit 100% und 255 display brightness
 
 04.04.2025
 
-Start um xx mit 100% und 128 display brightness
+Start um 08:15 mit 100%  und 128 display brightness
+
+09:51 --> 92%
+12:02 --> 83%
+14:14 --> 67%
+15:12 --> 63% 
+16:21 --> 49%
+17:33 --> 40%
+20:14 --> 14%
+
+--> 12h bei 128 display brightness
+
+Deep sleep ... mal schauen ob geladen wird
+
+23:30: 38%
+
+
