@@ -9,6 +9,7 @@
 #include <LittleFS.h>
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
+#include "BatteryDisplay.h"
 
 // constants
 #define WINDSPEED_PIN 19
@@ -35,6 +36,7 @@ WiFiManager wifiManager;
 Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, 255, 500};
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
+BatteryDisplay batteryDisplay;
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -436,6 +438,7 @@ void setup(void)
   setupSoundModule();
   windSpeedDisplay.setup();
   M5.Power.setChargeCurrent(500);
+  batteryDisplay.setup(settings.DisplayBrightness);
 }
 
 void evaluateTouches()
@@ -506,6 +509,7 @@ void loop(void)
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw((DrawType)menuX);
+    //batteryDisplay.draw();
     Serial.printf("Level: %d, Voltage: %d, Current: %d, IsCharging:%d, ChargeCurrent: %.2f, isACin: %d \n", M5.Power.getBatteryLevel(), M5.Power.getBatteryVoltage(), M5.Power.getBatteryCurrent(), M5.Power.isCharging(), M5.Power.Axp192.getBatteryChargeCurrent(), M5.Power.Axp192.isACIN());
   }
 }
