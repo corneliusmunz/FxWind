@@ -31,7 +31,7 @@ void WindSpeedDisplay::updateSettings(uint16_t windspeedThreshold, uint16_t wind
 {
     _windspeedThreshold = windspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
-    _display.setBrightness(brightness);
+    _display.setBrightness((int)(brightness/100.0f*255.0f));
 }
 
 void WindSpeedDisplay::draw(DrawType drawType)

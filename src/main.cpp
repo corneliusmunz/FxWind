@@ -10,15 +10,19 @@
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
 #include "BatteryDisplay.h"
+#include <Preferences.h>
 
 // constants
 #define WINDSPEED_PIN 19
 #define EVALUATION_RANGE 300
 #define SAMPLE_RATE 1000            // ms
-#define WINDSPEED_THRESHOLD 4       // m/s
+#define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
 #define NTP_SYNC_INTERVAL 600
-#define VOLUME 128
+#define VOLUME 100 // %
+#define DISPLAY_BRIGHTNESS 50 // %
+#define CHARGE_CURRENT 800 // mA
+#define PREFERENCE_NAMESPACE "f3xwind"
 
 // structs, enums
 struct Settings
@@ -32,8 +36,9 @@ struct Settings
 };
 
 // global variables
+Preferences preferences;
 WiFiManager wifiManager;
-Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, 255, 500};
+Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, DISPLAY_BRIGHTNESS, CHARGE_CURRENT};
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
 BatteryDisplay batteryDisplay;
@@ -50,6 +55,8 @@ byte packetBuffer[NTP_PACKET_SIZE];
 int menuX = 0;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
+
+void saveSettings();
 
 void interruptCallback(void)
 {
@@ -216,7 +223,7 @@ String printDirectory()
 
 void updateVolume()
 {
-  M5.Speaker.setVolume(settings.Volume);
+  M5.Speaker.setVolume((int)(settings.Volume/100.00f * 255.0f));
 }
 
 String getSettingsJson()
@@ -259,6 +266,7 @@ void updateSettings()
   windSpeedDisplay.updateSettings(settings.Threshold, settings.DurationRange, settings.DisplayBrightness);
   updateVolume();
   M5.Power.Axp192.setChargeCurrent(settings.MaximumChargeCurrent);
+  saveSettings();
 }
 
 void handleDownloadRequest(AsyncWebServerRequest *request)
@@ -385,7 +393,6 @@ void parseMyPageBody(AsyncWebServerRequest *req, uint8_t *data, size_t len, size
   settings.CalibrationFactor = calibrationValue;
   settings.DisplayBrightness = displayBrightness;
   settings.MaximumChargeCurrent = maximumChargeCurrent;
-
   updateSettings();
 }
 
@@ -425,6 +432,31 @@ void setupLittleFS()
     return;
   }
 }
+void saveSettings() {
+  preferences.begin(PREFERENCE_NAMESPACE, false);
+  preferences.putInt("Volume", settings.Volume);
+  preferences.putInt("Threshold", settings.Threshold);
+  preferences.putInt("Calibration", settings.CalibrationFactor);
+  preferences.putInt("Brightness", settings.DisplayBrightness);
+  preferences.putInt("MaxCurrent", settings.MaximumChargeCurrent);
+  preferences.putInt("DurationRange", settings.DurationRange);
+  preferences.end();
+  Serial.println("Preferences saved");
+}
+
+void setupPreferences(){
+  preferences.begin(PREFERENCE_NAMESPACE, false);
+  settings.Volume = preferences.getInt("Volume", VOLUME);
+  settings.Threshold = preferences.getInt("Threshold", WINDSPEED_THRESHOLD);
+  settings.CalibrationFactor = preferences.getInt("Calibration", 1);
+  settings.DisplayBrightness = preferences.getInt("Brightness", DISPLAY_BRIGHTNESS);
+  settings.MaximumChargeCurrent = preferences.getInt("MaxCurrent", CHARGE_CURRENT);
+  settings.DurationRange = preferences.getInt("DurationRange", WINDSPEED_DURATION_RANGE);
+  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", settings.Volume, settings.Threshold, settings.CalibrationFactor, settings.MaximumChargeCurrent, settings.DisplayBrightness);
+  preferences.end();
+  saveSettings();
+  updateSettings();
+}
 
 void setup(void)
 {
@@ -437,8 +469,7 @@ void setup(void)
   setupServer();
   setupSoundModule();
   windSpeedDisplay.setup();
-  M5.Power.setChargeCurrent(500);
-  batteryDisplay.setup(settings.DisplayBrightness);
+  setupPreferences();
 }
 
 void evaluateTouches()

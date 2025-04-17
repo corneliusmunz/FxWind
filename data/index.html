@@ -69,10 +69,10 @@
         </div>
         <canvas id="chart"></canvas>
         <div id="statistics" style="margin-top: 20px;">
-            <p><strong>Current:</strong> <span id="currentValue"></span> m/s</p>
-            <p><strong>Minimum:</strong> <span id="minValue"></span> m/s</p>
-            <p><strong>Maximum:</strong> <span id="maxValue"></span> m/s</p>
-            <p><strong>Average:</strong> <span id="avgValue"></span> m/s</p>
+            <p><strong>Current:</strong> <span id="currentValue"></span> [m/s]</p>
+            <p><strong>Minimum:</strong> <span id="minValue"></span> [m/s]</p>
+            <p><strong>Maximum:</strong> <span id="maxValue"></span> [m/s]</p>
+            <p><strong>Average:</strong> <span id="avgValue"></span> [m/s]</p>
             <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
         </div>
     </div>
@@ -84,24 +84,24 @@
     <div id="settings" class="tab-content hidden">
         <form id="settingsForm">
             <div class="form-group">
-                <label for="threshold">Threshold</label>
-                <input type="number" id="threshold" name="threshold" placeholder="fai wind threshold 2..12 m/s" min="2" max="12">
+                <label for="threshold">Threshold [m/s]</label>
+                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2" max="12">
             </div>
             <div class="form-group">
-                <label for="volume">Volume</label>
-                <input type="number" id="volume" name="volume" placeholder="speaker volume 0..255" min="0" max="255">
+                <label for="volume">Volume [%]</label>
+                <input type="number" id="volume" name="volume" placeholder="Speaker volume 0..100%" min="0" max="100">
             </div>
-            <div class="form-group">
+            <!-- <div class="form-group">
                 <label for="calibrationfactor">Calibration Value</label>
-                <input type="number" id="calibrationfactor" name="calibrationfactor"  placeholder="calibration factor - currently not used" min="1" max="1">
+                <input type="number" id="calibrationfactor" name="calibrationfactor"  placeholder="Calibration factor - currently not used" min="1" max="1">
+            </div> -->
+            <div class="form-group">
+                <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
+                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting" placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
             </div>
             <div class="form-group">
-                <label for="maximumChargeCurrentSetting">Maximum Charge current</label>
-                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting" placeholder="maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
-            </div>
-            <div class="form-group">
-                <label for="displayBrightnessSetting">Display Brightness</label>
-                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting" placeholder="display background brightness level 50..255" min="50" max="255">
+                <label for="displayBrightnessSetting">Display Brightness [%]</label>
+                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting" placeholder="Display background brightness level 0..100%" min="30" max="100">
             </div>
             <button type="submit">Save</button>
         </form>
@@ -111,12 +111,12 @@
 
     <div id="status" class="tab-content">
         <div id="status" style="margin-top: 20px;">
-            <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> %</p>
+            <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> [%]</p>
             <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
             <p><strong>Charging:</strong> <span id="isCharging"></span></p>
-            <p><strong>Current:</strong> <span id="deviceCurrent"></span> mA</p>
+            <p><strong>Charging Current:</strong> <span id="deviceCurrent"></span> [mA]</p>
             <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
-            <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> dB</p>
+            <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> [dB]</p>
         </div>
     </div>
 
@@ -390,7 +390,6 @@
                 document.getElementById('threshold').value = settings.Threshold || '';
                 evaluationThreshold = settings.Threshold;
                 document.getElementById('volume').value = settings.Volume || '';
-                document.getElementById('calibrationfactor').value = settings.CalibrationFactor || '';
                 document.getElementById('maximumChargeCurrentSetting').value = settings.MaximumChargeCurrent || 1;
                 document.getElementById('displayBrightnessSetting').value = settings.DisplayBrightness || 2;
             } catch (error) {
