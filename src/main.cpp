@@ -19,9 +19,9 @@
 #define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
 #define NTP_SYNC_INTERVAL 600
-#define VOLUME 100 // %
+#define VOLUME 100            // %
 #define DISPLAY_BRIGHTNESS 50 // %
-#define CHARGE_CURRENT 800 // mA
+#define CHARGE_CURRENT 800    // mA
 #define PREFERENCE_NAMESPACE "f3xwind"
 
 // structs, enums
@@ -53,6 +53,7 @@ const int timeZone = 0;
 const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
 int menuX = 0;
+bool isAlarmActive = false;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
 
@@ -223,7 +224,7 @@ String printDirectory()
 
 void updateVolume()
 {
-  M5.Speaker.setVolume((int)(settings.Volume/100.00f * 255.0f));
+  M5.Speaker.setVolume((int)(settings.Volume / 100.00f * 255.0f));
 }
 
 String getSettingsJson()
@@ -314,7 +315,7 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
   }
 }
 
-void playSound(int duration = 2000)
+void playSound(uint32_t duration = 4294967295U)
 {
   M5.Speaker.tone(440, duration);
 }
@@ -340,9 +341,7 @@ void setupWifi()
   wifiManager.setHostname(hostname);
   bool res;
 
-  // wifiManager.resetSettings();
-
-  wifiManager.autoConnect("F3XWind");
+  res = wifiManager.autoConnect("F3XWind");
 
   if (!res)
   {
@@ -368,7 +367,8 @@ void setupNtpTimeSyncProvider()
 
 void evaluationCallback()
 {
-  playSound(5000);
+  playSound();
+  isAlarmActive = true;
 }
 
 void setupWindspeedIO()
@@ -432,7 +432,8 @@ void setupLittleFS()
     return;
   }
 }
-void saveSettings() {
+void saveSettings()
+{
   preferences.begin(PREFERENCE_NAMESPACE, false);
   preferences.putInt("Volume", settings.Volume);
   preferences.putInt("Threshold", settings.Threshold);
@@ -444,7 +445,8 @@ void saveSettings() {
   Serial.println("Preferences saved");
 }
 
-void setupPreferences(){
+void setupPreferences()
+{
   preferences.begin(PREFERENCE_NAMESPACE, false);
   settings.Volume = preferences.getInt("Volume", VOLUME);
   settings.Threshold = preferences.getInt("Threshold", WINDSPEED_THRESHOLD);
@@ -470,6 +472,16 @@ void setup(void)
   setupSoundModule();
   windSpeedDisplay.setup();
   setupPreferences();
+}
+
+void startDeepSleep()
+{
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); // gpio39 == touch INT
+  delay(100);
+  M5.Display.fillScreen(TFT_BLACK);
+  M5.Display.sleep();
+  M5.Display.waitDisplay();
+  esp_deep_sleep_start();
 }
 
 void evaluateTouches()
@@ -509,6 +521,7 @@ void evaluateTouches()
             menuX--;
           }
         }
+        windSpeedDisplay.draw((DrawType)menuX);
       }
     }
     if (touchDetail.wasHold())
@@ -516,13 +529,21 @@ void evaluateTouches()
       stopSound();
     }
 
-    if (touchDetail.wasDragged()) {
-      esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); // gpio39 == touch INT
-      delay(100);
-      M5.Display.fillScreen(TFT_BLACK);
-      M5.Display.sleep();
-      M5.Display.waitDisplay();
-      esp_deep_sleep_start();
+    if (touchDetail.wasDragged())
+    {
+      startDeepSleep();
+    }
+
+    if (isAlarmActive && touchDetail.getClickCount() == 2)
+    {
+      stopSound();
+      isAlarmActive = false;
+    }
+
+    if (touchDetail.getClickCount() == 3)
+    {
+      wifiManager.resetSettings();
+      startDeepSleep();
     }
   }
 }
@@ -540,7 +561,7 @@ void loop(void)
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw((DrawType)menuX);
-    //batteryDisplay.draw();
+    // batteryDisplay.draw();
     Serial.printf("Level: %d, Voltage: %d, Current: %d, IsCharging:%d, ChargeCurrent: %.2f, isACin: %d \n", M5.Power.getBatteryLevel(), M5.Power.getBatteryVoltage(), M5.Power.getBatteryCurrent(), M5.Power.isCharging(), M5.Power.Axp192.getBatteryChargeCurrent(), M5.Power.Axp192.isACIN());
   }
 }

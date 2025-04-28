@@ -49,9 +49,9 @@ https://www.fai.org/sites/default/files/sc4_vol_f3_soaring_25.pdf
 
 ## Extracts
 
-Extracts of the sporting codes of different competition categories
+Extracts of the sporting codes of different FAI competition categories
 
-**CIAM General rules**
+### CIAM General rules
 
 > C.17.2 Interruption
 > a) The contest should be interrupted or the start delayed by the contest director in the following
@@ -60,7 +60,7 @@ Extracts of the sporting codes of different competition categories
 > continuously stronger than **12 m/s** measured **at two (2) metres** above the ground at the starting
 > line (flight line), **for at least one minute**
 
-**Soaring F3B**
+### Soaring F3B
 
 > F3B.1.11. Weather Conditions / Interruptions
 > a) The maximum wind speed for F3B contests is twelve (12) m/sec. The > contest has to be interrupted
@@ -68,7 +68,7 @@ Extracts of the sporting codes of different competition categories
 > times for at least twenty (20) seconds in a time interval of five (5) > minutes two (2) metres above the ground
 > at the start and landing area.
 
-**Soaring F3F**
+### Soaring F3F
 
 > F3F.1.17. Weather Conditions and interruptions
 > A round in progress must be interrupted if:-
@@ -79,7 +79,7 @@ Extracts of the sporting codes of different competition categories
 > The wind speed and wind direction are measured with the equipment of the > organiser at a representative
 > position and height chosen from the experience of the organiser.
 
-**Soaring F3G**
+### Soaring F3G
 
 > F3G.1.12. Weather Conditions/Interruptions
 > a) The maximum wind speed for F3G contests is twelve (12) m/sec. The > contest has to be interrupted
@@ -87,7 +87,7 @@ Extracts of the sporting codes of different competition categories
 > times for at least twenty (20) seconds in a time interval of five (5) > minutes two (2) metres above the ground
 > at the start and landing area.
 
-**Soaring F3J**
+### Soaring F3J
 
 > F3J.12. WEATHER CONDITIONS AND INTERRUPTIONS
 > The maximum wind speed for F3J contests is twelve (12) m/sec two (2) m > above the ground at the centre of
@@ -95,7 +95,7 @@ Extracts of the sporting codes of different competition categories
 > contest director if the wind speed exceeds twelve (12) m/sec measured > three (3) times for at least twenty
 > (20) sec in a time interval of five (5) minutes at the start and landing > area.
 
-**Soaring F3K**
+### Soaring F3K
 
 > F3K.5. WEATHER CONDITIONS / INTERRUPTIONS
 > The maximum wind speed for F3K contests is eight (8) m/sec. The start of > the contest must be delayed or
@@ -104,7 +104,7 @@ Extracts of the sporting codes of different competition categories
 > ground at the start and landing field. In the case of rain, the contest > director can interrupt the contest. When
 > the rain stops, the contest starts again with the group that was flying, > which receives a re-flight.
 
-**Soaring F3L**
+### Soaring F3L
 
 > F3L.6 Interruptions
 > a) The Contest Director has the right to interrupt the competition and > relocate the starting line
@@ -114,7 +114,7 @@ Extracts of the sporting codes of different competition categories
 > line), for at least one minute.
 
 
-**Helicopter**
+### Helicopter
 
 > INTERRUPTION OF A COMPETITION
 > If the wind component perpendicular to the flight line exceeds 8ms/s for > a minimum of 20 seconds
@@ -123,7 +123,7 @@ Extracts of the sporting codes of different competition categories
 > round is completed, the entire round will be dropped. The determination > will be made by the organiser
 > with concurrence of the FAI Jury.
 
-**Free flight**
+### Free flight
 
 > F1.5 INTERRUPTION OF A CONTEST
 > F1.5.1 Wind speed
@@ -131,7 +131,7 @@ Extracts of the sporting codes of different competition categories
 > contest should be interrupted when the wind measured at 2 metres above > the ground at the starting
 > line is stronger than 9 m/s for at least 20 seconds.
 
-**Control line**
+### Control line
 
 > 4.0.1 INTERRUPTION OF THE CONTEST
 > Wind stronger than 9 m/s for at least 30 seconds (instead of 12 m/s for > at least one minute in
