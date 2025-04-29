@@ -10,6 +10,7 @@
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
 #include "BatteryDisplay.h"
+#include "StartupDisplay.h"
 #include <Preferences.h>
 
 // constants
@@ -42,6 +43,7 @@ Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, D
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
 BatteryDisplay batteryDisplay;
+StartupDisplay startupDisplay;
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -54,6 +56,8 @@ const int NTP_PACKET_SIZE = 48;
 byte packetBuffer[NTP_PACKET_SIZE];
 int menuX = 0;
 bool isAlarmActive = false;
+bool isStartupActive = true;
+bool isAPModeActive = true;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
 
@@ -330,30 +334,43 @@ void setupSoundModule()
   auto config = M5.config();
   config.external_speaker.atomic_spk = true;
   config.external_speaker.module_display = true;
-  M5.Speaker.setVolume(settings.Volume);
+  updateVolume();
   M5.Speaker.begin();
 }
 
 void setupWifi()
 {
-  WiFi.mode(WIFI_STA);
 
-  wifiManager.setHostname(hostname);
-  bool res;
-
-  res = wifiManager.autoConnect("F3XWind");
-
-  if (!res)
+  if (isAPModeActive)
   {
-    Serial.println("Failed to connect");
+    const char *ssid = "F3XWind Accesspoint";
+
+    WiFi.softAP(ssid);
+
+    IPAddress IP = WiFi.softAPIP();
+    Serial.print("AP IP address: ");
+    Serial.println(IP);
   }
   else
   {
-    Serial.println("Connected successfull");
-  }
+    WiFi.mode(WIFI_MODE_STA);
+    wifiManager.setHostname(hostname);
+    bool res;
 
-  Serial.print("IP number assigned by DHCP is ");
-  Serial.println(WiFi.localIP());
+    res = wifiManager.autoConnect("F3XWind");
+
+    if (!res)
+    {
+      Serial.println("Failed to connect");
+    }
+    else
+    {
+      Serial.println("Connected successfull");
+    }
+
+    Serial.print("IP number assigned by DHCP is ");
+    Serial.println(WiFi.localIP());
+  }
 }
 
 void setupNtpTimeSyncProvider()
@@ -363,12 +380,29 @@ void setupNtpTimeSyncProvider()
   Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
   setSyncInterval(NTP_SYNC_INTERVAL);
+  Serial.println("NTP Sync done");
 }
 
 void evaluationCallback()
 {
   playSound();
   isAlarmActive = true;
+}
+
+void startButtonCallback(bool isAPEnabled)
+{
+  if (isAPEnabled)
+  {
+    isAPModeActive = true;
+    Serial.println("Start Button pressed, AP enabled");
+  }
+  else
+  {
+    isAPModeActive = false;
+    Serial.println("Start Button pressed, AP disabled");
+  }
+  isStartupActive = false;
+  playSound(1000);
 }
 
 void setupWindspeedIO()
@@ -465,11 +499,21 @@ void setup(void)
   M5.begin();
   windSpeed.setup();
   setupWindspeedIO();
+  setupSoundModule();
+
+  startupDisplay.setup(255);
+  startupDisplay.setupStartButtonCallback(&startButtonCallback);
+  startupDisplay.draw();
+  while (isStartupActive)
+  {
+    /* code */
+    delay(1);
+    startupDisplay.evaluateTouches();
+  }
   setupWifi();
   setupNtpTimeSyncProvider();
   setupLittleFS();
   setupServer();
-  setupSoundModule();
   windSpeedDisplay.setup();
   setupPreferences();
 }
