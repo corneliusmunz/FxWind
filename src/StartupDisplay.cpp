@@ -2,7 +2,6 @@
 
 StartupDisplay::StartupDisplay()
 {
-
 }
 
 void StartupDisplay::setup(int displayBrightness, bool isAPEnabled)
@@ -40,7 +39,7 @@ void StartupDisplay::draw()
 
     _display.waitDisplay();
     _display.setTextColor(TXT_DEFAULT_COLOR, TFT_WHITE);
-    
+
     int buttonWidth = 100;
     int buttonHeight = 50;
     int buttonSpacing = (_display.width() - 2 * buttonWidth) / 3;
@@ -78,7 +77,7 @@ void StartupDisplay::draw()
 
     _display.setFont(&fonts::DejaVu24);
     int fontHeight = _display.fontHeight();
-    _display.drawString("AP", buttonSpacing+30, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
+    _display.drawString("AP", buttonSpacing + 30, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
     _display.drawString("WiFi", 2 * buttonSpacing + buttonWidth + 20, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
     _display.drawString("START", buttonSpacing + 80, buttonLine2StartY + (buttonHeight - fontHeight) / 2);
 
@@ -102,7 +101,7 @@ void StartupDisplay::evaluateTouches()
         static m5::touch_state_t prev_state;
         auto touchDetail = M5.Touch.getDetail();
 
-        if (touchDetail.wasReleased()) 
+        if (touchDetail.wasReleased())
         {
             // Start Button pressed
             if (touchDetail.x > buttonSpacing && touchDetail.x < _display.width() - buttonSpacing && touchDetail.y > buttonLine2StartY && touchDetail.y < buttonLine2StartY + buttonHeight)
@@ -120,8 +119,7 @@ void StartupDisplay::evaluateTouches()
         if (touchDetail.wasPressed())
         {
             // AP Button pressed
-            if(touchDetail.x > buttonSpacing && touchDetail.x < buttonSpacing+buttonWidth 
-                && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
+            if (touchDetail.x > buttonSpacing && touchDetail.x < buttonSpacing + buttonWidth && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
             {
                 Serial.println("AP Button pressed");
                 _isAPEnabled = true;
@@ -129,8 +127,7 @@ void StartupDisplay::evaluateTouches()
             }
 
             // Wifi Button pressed
-            if (touchDetail.x > 2*buttonSpacing+buttonWidth && touchDetail.x < _display.width()-buttonSpacing 
-                && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
+            if (touchDetail.x > 2 * buttonSpacing + buttonWidth && touchDetail.x < _display.width() - buttonSpacing && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
             {
                 Serial.println("WiFi Button pressed");
                 _isAPEnabled = false;
@@ -138,8 +135,7 @@ void StartupDisplay::evaluateTouches()
             }
 
             // Start Button pressed
-            if (touchDetail.x > buttonSpacing && touchDetail.x < _display.width() - buttonSpacing 
-                && touchDetail.y > buttonLine2StartY && touchDetail.y < buttonLine2StartY + buttonHeight)
+            if (touchDetail.x > buttonSpacing && touchDetail.x < _display.width() - buttonSpacing && touchDetail.y > buttonLine2StartY && touchDetail.y < buttonLine2StartY + buttonHeight)
             {
                 Serial.println("Start Button pressed");
                 _isStartButtonPressed = true;

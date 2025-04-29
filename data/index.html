@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F3X Wind measurement</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -85,7 +86,8 @@
         <form id="settingsForm">
             <div class="form-group">
                 <label for="threshold">Threshold [m/s]</label>
-                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2" max="12">
+                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2"
+                    max="12">
             </div>
             <div class="form-group">
                 <label for="volume">Volume [%]</label>
@@ -97,11 +99,13 @@
             </div> -->
             <div class="form-group">
                 <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
-                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting" placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
+                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting"
+                    placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
             </div>
             <div class="form-group">
                 <label for="displayBrightnessSetting">Display Brightness [%]</label>
-                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting" placeholder="Display background brightness level 0..100%" min="30" max="100">
+                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting"
+                    placeholder="Display background brightness level 0..100%" min="30" max="100">
             </div>
             <button type="submit">Save</button>
         </form>
@@ -444,7 +448,7 @@
             jsonSettings["MaximumChargeCurrent"] = settings.maximumChargeCurrentSetting;
             jsonSettings["DisplayBrightness"] = settings.displayBrightnessSetting;
 
-            
+
             try {
                 // Send the form data as a POST request to the /settings endpoint
                 const response = await fetch('./settings', {

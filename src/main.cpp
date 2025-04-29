@@ -5,6 +5,7 @@
 #include <WiFiManager.h>
 #include <TimeLib.h>
 #include <ESPAsyncWebServer.h>
+#include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include "WindSpeed.h"
@@ -24,6 +25,8 @@
 #define DISPLAY_BRIGHTNESS 50 // %
 #define CHARGE_CURRENT 800    // mA
 #define PREFERENCE_NAMESPACE "f3xwind"
+#define MDNSNAME "f3xwind"
+#define AP_SSID "f3xwind Accesspoint"
 
 // structs, enums
 struct Settings
@@ -338,12 +341,24 @@ void setupSoundModule()
   M5.Speaker.begin();
 }
 
+void setupDns()
+{
+  if (!MDNS.begin(MDNSNAME))
+  {
+    Serial.println("Error setting up MDNS responder!");
+  }
+  {
+    Serial.println("Error setting up MDNS responder!");
+  }
+  Serial.println("mDNS responder started");
+}
+
 void setupWifi()
 {
 
   if (isAPModeActive)
   {
-    const char *ssid = "F3XWind Accesspoint";
+    const char *ssid = AP_SSID;
 
     WiFi.softAP(ssid);
 
@@ -357,7 +372,7 @@ void setupWifi()
     wifiManager.setHostname(hostname);
     bool res;
 
-    res = wifiManager.autoConnect("F3XWind");
+    res = wifiManager.autoConnect(AP_SSID);
 
     if (!res)
     {
@@ -371,6 +386,7 @@ void setupWifi()
     Serial.print("IP number assigned by DHCP is ");
     Serial.println(WiFi.localIP());
   }
+  setupDns();
 }
 
 void setupNtpTimeSyncProvider()
@@ -438,6 +454,11 @@ void handleSettings(AsyncWebServerRequest *request)
 
 void setupServer()
 {
+
+  server.on("/chart.js", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/chart.js"); });
+  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/favicon.ico"); });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html"); });
   server.on("/windspeed", HTTP_GET, [](AsyncWebServerRequest *request)
