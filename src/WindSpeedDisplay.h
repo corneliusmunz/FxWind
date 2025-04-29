@@ -12,7 +12,8 @@ enum struct DrawType
     COMBINED = 0,
     PLOT = 1,
     NUMBER = 2,
-    STATUS = 3
+    STATUS = 3,
+    QR_CODE = 4
 };
 
 #define PLOT_OFFSET_X 20
@@ -47,6 +48,7 @@ private:
     void drawPlotView();
     void drawCombinedView();
     void drawNumberView();
+    void drawQRCode();
 
     void drawStatus();
     void drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight);

@@ -259,8 +259,11 @@ String getStatusJson()
   jsonDocument["Current"] = M5.Power.getBatteryCurrent();
   jsonDocument["IsPowerConnected"] = M5.Power.Axp192.isACIN();
   jsonDocument["IsCharging"] = M5.Power.isCharging();
-  jsonDocument["WifiIpAddress"] = WiFi.localIP();
+  jsonDocument["WifiIpAddress"] = isAPModeActive ? WiFi.softAPIP() : WiFi.localIP();
   jsonDocument["WifiRSSI"] = WiFi.RSSI();
+  jsonDocument["WifiMode"] = isAPModeActive ? "Accesspoint" : "WiFi";
+  jsonDocument["WifiSSID"] = isAPModeActive ? AP_SSID : "NONE";
+  jsonDocument["WifiHostname"] = String("http://") + MDNSNAME + String(".local");
 
   String jsonString;
   jsonDocument.shrinkToFit();
@@ -565,7 +568,7 @@ void evaluateTouches()
         if (touchDetail.distanceX() > 0)
         {
           // Serial.println("Swipe RIGHT");
-          if (menuX == 3)
+          if (menuX == 4)
           {
             menuX = 0;
           }
@@ -579,7 +582,7 @@ void evaluateTouches()
           // Serial.println("Swipe LEFT");
           if (menuX == 0)
           {
-            menuX = 3;
+            menuX = 4;
           }
           else
           {

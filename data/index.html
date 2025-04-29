@@ -121,6 +121,9 @@
             <p><strong>Charging Current:</strong> <span id="deviceCurrent"></span> [mA]</p>
             <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
             <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> [dB]</p>
+            <p><strong>Wifi Mode:</strong> <span id="wifiMode"></span></p>
+            <p><strong>Wifi SSID:</strong> <span id="wifiSSID"></span></p>
+            <p><strong>Wifi Hostname:</strong> <span id="wifiHostname"></span></p>
         </div>
     </div>
 
@@ -413,6 +416,9 @@
                 document.getElementById('isCharging').textContent = data.IsCharging;
                 document.getElementById('wifiIpAddress').textContent = data.WifiIpAddress;
                 document.getElementById('wifiRssi').textContent = data.WifiRSSI.toFixed(0);
+                document.getElementById('wifiMode').textContent = data.WifiMode;
+                document.getElementById('wifiSSID').textContent = data.WifiSSID;
+                document.getElementById('wifiHostname').textContent = data.WifiHostname;
             } catch (error) {
                 console.error('Error fetching status:', error);
             }

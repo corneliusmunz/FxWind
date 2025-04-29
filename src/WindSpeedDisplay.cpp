@@ -38,7 +38,14 @@ void WindSpeedDisplay::draw(DrawType drawType)
 {
     if (_currentDrawType != drawType)
     {
-        _display.clear();
+        if(_currentDrawType == DrawType::QR_CODE)
+        {
+            M5.Lcd.clear();
+        }
+        else
+        {
+            _display.clear();
+        }
         _currentDrawType = drawType;
     }
 
@@ -60,10 +67,19 @@ void WindSpeedDisplay::draw(DrawType drawType)
         drawStatusView();
         break;
 
+    case DrawType::QR_CODE:
+        drawQRCode();
+        break;
+
     default:
         drawCombinedView();
         break;
     }
+}
+
+void WindSpeedDisplay::drawQRCode()
+{
+    M5.Lcd.qrcode(String("http://") + String("f3xwind") + String(".local"), 40, 0, 240);
 }
 
 void WindSpeedDisplay::drawStatusView()
