@@ -20,13 +20,14 @@
 #define SAMPLE_RATE 1000            // ms
 #define WINDSPEED_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
-#define NTP_SYNC_INTERVAL 600
+#define TIME_SYNC_INTERVAL 600
 #define VOLUME 100            // %
 #define DISPLAY_BRIGHTNESS 50 // %
 #define CHARGE_CURRENT 800    // mA
-#define PREFERENCE_NAMESPACE "f3xwind"
-#define MDNSNAME "f3xwind"
-#define AP_SSID "f3xwind Accesspoint"
+#define PREFERENCE_NAMESPACE "fxwind"
+#define MDNSNAME "fxwind"
+#define AP_SSID "fxwind Accesspoint"
+#define NTP_SERVER1 "0.pool.ntp.org"
 
 // structs, enums
 struct Settings
@@ -95,6 +96,26 @@ void sendNTPpacket(IPAddress &address)
   Udp.endPacket();
 }
 
+time_t getRtcTime()
+{
+  // Get the current RTC datetime
+  auto dateTime = M5.Rtc.getDateTime();
+
+  // Populate the tm structure
+  struct tm t;
+  t.tm_year = dateTime.date.year - 1900; // tm_year is years since 1900
+  t.tm_mon = dateTime.date.month - 1;    // tm_mon is 0-based (0 = January)
+  t.tm_mday = dateTime.date.date;
+  t.tm_hour = dateTime.time.hours;
+  t.tm_min = dateTime.time.minutes;
+  t.tm_sec = dateTime.time.seconds;
+  t.tm_isdst = -1; // Daylight saving time (let the system determine)
+
+  // Convert to time_t
+  Serial.println("time synched from RTC");
+  return mktime(&t);
+}
+
 time_t getNtpTime()
 {
   IPAddress ntpServerIP;
@@ -122,7 +143,9 @@ time_t getNtpTime()
       secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
       secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
       secsSince1900 |= (unsigned long)packetBuffer[43];
-      return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+      unsigned long timeValue = secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+      Serial.println("time synched from NTP server");
+      return timeValue;
     }
   }
   Serial.println("No NTP Response :-(");
@@ -252,8 +275,18 @@ String getSettingsJson()
   return jsonString;
 }
 
+String getTimestampString()
+{
+  time_t t = now();
+  char stringbuffer[100];
+  sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
+  return String(stringbuffer);
+}
+
 String getStatusJson()
 {
+
+  
   JsonDocument jsonDocument;
 
   jsonDocument["BatteryLevel"] = M5.Power.getBatteryLevel();
@@ -265,6 +298,7 @@ String getStatusJson()
   jsonDocument["WifiMode"] = isAPModeActive ? "Accesspoint" : "WiFi";
   jsonDocument["WifiSSID"] = isAPModeActive ? AP_SSID : "NONE";
   jsonDocument["WifiHostname"] = String("http://") + MDNSNAME + String(".local");
+  jsonDocument["DateTime"] = getTimestampString();
 
   String jsonString;
   jsonDocument.shrinkToFit();
@@ -338,9 +372,6 @@ void stopSound()
 
 void setupSoundModule()
 {
-  auto config = M5.config();
-  config.external_speaker.atomic_spk = true;
-  config.external_speaker.module_display = true;
   updateVolume();
   M5.Speaker.begin();
 }
@@ -351,10 +382,10 @@ void setupDns()
   {
     Serial.println("Error setting up MDNS responder!");
   }
+  else
   {
-    Serial.println("Error setting up MDNS responder!");
+    Serial.println("mDNS responder started");
   }
-  Serial.println("mDNS responder started");
 }
 
 void setupWifi()
@@ -363,9 +394,7 @@ void setupWifi()
   if (isAPModeActive)
   {
     const char *ssid = AP_SSID;
-
     WiFi.softAP(ssid);
-
     IPAddress IP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
     Serial.println(IP);
@@ -393,14 +422,43 @@ void setupWifi()
   setupDns();
 }
 
+void setupRtcTimeSyncProvider()
+{
+  setSyncProvider(getRtcTime);
+  setSyncInterval(TIME_SYNC_INTERVAL);
+}
+
 void setupNtpTimeSyncProvider()
 {
   Serial.println("Starting UDP");
   Udp.begin(localPort);
   Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
-  setSyncInterval(NTP_SYNC_INTERVAL);
+  setSyncInterval(TIME_SYNC_INTERVAL);
   Serial.println("NTP Sync done");
+}
+
+void setupRtc() {
+
+  if (!M5.Rtc.isEnabled())
+  {
+    Serial.println("RTC not found.");
+    return;
+  }
+
+  Serial.println("RTC found.");
+  auto dt = M5.Rtc.getDateTime();
+  Serial.printf("RTC before set   UTC  :%04d/%02d/%02d  %02d:%02d:%02d\r\n", dt.date.year, dt.date.month, dt.date.date, dt.time.hours, dt.time.minutes, dt.time.seconds);
+
+  if (isAPModeActive) {
+    setupRtcTimeSyncProvider();
+  } else {
+    setupNtpTimeSyncProvider();
+  }
+
+  // update RTC with current system time
+  time_t t = now();
+  M5.Rtc.setDateTime(gmtime(&t));
 }
 
 void evaluationCallback()
@@ -518,32 +576,46 @@ void setupPreferences()
   updateSettings();
 }
 
-void setup(void)
-{
-  M5.begin();
-  windSpeed.setup();
-  setupWindspeedIO();
-  setupSoundModule();
-  setupLittleFS();
-
+void setupStartupLogo() {
   File pngLogo = LittleFS.open("/FxWindStartLogo.png", "r");
   Serial.println("Logo size: " + String(pngLogo.size()));
   display.begin();
   display.drawPng(&pngLogo, 1, 18);
   delay(3000);
   display.clear();
+}
 
+void setupStartupDisplay() {
   startupDisplay.setup(255);
   startupDisplay.setupStartButtonCallback(&startButtonCallback);
   startupDisplay.draw();
   while (isStartupActive)
   {
-    /* code */
     delay(1);
     startupDisplay.evaluateTouches();
   }
+}
+
+void setupM5(){
+  auto config = M5.config();
+  config.external_speaker.atomic_spk = true;
+  config.external_speaker.module_display = true;
+  config.external_rtc = true;
+  M5.begin();
+}
+
+void setup(void)
+{
+  // order of initialization is important
+  setupM5();
+  windSpeed.setup();
+  setupWindspeedIO();
+  setupSoundModule();
+  setupLittleFS();
+  //setupStartupLogo();
+  setupStartupDisplay();
   setupWifi();
-  setupNtpTimeSyncProvider();
+  setupRtc();
   setupServer();
   windSpeedDisplay.setup();
   setupPreferences();
@@ -574,7 +646,6 @@ void evaluateTouches()
       {
         if (touchDetail.distanceX() > 0)
         {
-          // Serial.println("Swipe RIGHT");
           if (menuX == 4)
           {
             menuX = 0;
@@ -586,7 +657,6 @@ void evaluateTouches()
         }
         else
         {
-          // Serial.println("Swipe LEFT");
           if (menuX == 0)
           {
             menuX = 4;
@@ -627,7 +697,6 @@ void loop(void)
 {
   M5.delay(1);
   M5.update();
-
   evaluateTouches();
 
   long currentMillis = millis();

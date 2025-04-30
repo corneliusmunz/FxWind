@@ -79,7 +79,7 @@ void WindSpeedDisplay::draw(DrawType drawType)
 
 void WindSpeedDisplay::drawQRCode()
 {
-    M5.Lcd.qrcode(String("http://") + String("f3xwind") + String(".local"), 40, 0, 240);
+    M5.Lcd.qrcode(String("http://") + String("fxwind") + String(".local"), 40, 0, 240);
 }
 
 void WindSpeedDisplay::drawStatusView()

@@ -25,9 +25,9 @@ void StartupDisplay::setup(int displayBrightness, bool isAPEnabled)
 
 String StartupDisplay::getTimestampString()
 {
-    time_t t = now();
+    auto dateTime = M5.Rtc.getDateTime();
     char stringbuffer[100];
-    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
+    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", dateTime.date.year, dateTime.date.month, dateTime.date.date, dateTime.time.hours, dateTime.time.minutes, dateTime.time.seconds);
     return String(stringbuffer);
 }
 
@@ -49,7 +49,7 @@ void StartupDisplay::draw()
     int buttonColor = TFT_GREEN;
 
     _display.setFont(&fonts::DejaVu40);
-    _display.drawString("F3xWind", 70, headlineStartY);
+    _display.drawString("FxWind", 70, headlineStartY);
 
     _display.setFont(&fonts::DejaVu12);
     _display.drawString("Date: " + getTimestampString(), buttonSpacing, 50);

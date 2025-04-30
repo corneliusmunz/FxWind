@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F3X Wind measurement</title>
+    <title>FxWind measurement</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="chart.js"></script>
     <style>
@@ -56,7 +56,7 @@
 </head>
 
 <body>
-    <h1>F3X Wind measurement</h1>
+    <h1>FxWind measurement</h1>
     <div class="tabs">
         <div class="tab active" data-tab="live-data">Live Data</div>
         <div class="tab" data-tab="downloads">Downloads</div>
@@ -115,6 +115,7 @@
 
     <div id="status" class="tab-content">
         <div id="status" style="margin-top: 20px;">
+            <p><strong>Current Datetime:</strong> <span id="dateTime"></span> (UTC)</p>
             <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> [%]</p>
             <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
             <p><strong>Charging:</strong> <span id="isCharging"></span></p>
@@ -374,7 +375,7 @@
                     row.innerHTML = `
         <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Date}</td>
         <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
-          <a href="http://192.168.178.95/downloads?filename=${file.Filename}" download>${file.Filename}</a>
+          <a href="downloads?filename=${file.Filename}" download>${file.Filename}</a>
         </td>
         <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Filesize}</td>
       `;
@@ -419,6 +420,7 @@
                 document.getElementById('wifiMode').textContent = data.WifiMode;
                 document.getElementById('wifiSSID').textContent = data.WifiSSID;
                 document.getElementById('wifiHostname').textContent = data.WifiHostname;
+                document.getElementById('dateTime').textContent = data.DateTime;
             } catch (error) {
                 console.error('Error fetching status:', error);
             }

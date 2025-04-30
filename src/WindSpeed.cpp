@@ -279,7 +279,7 @@ String WindSpeed::getLogFilePath()
 
 String WindSpeed::getLogFileHeader()
 {
-    return "Timestamp, Windspeed[m/s], BatteryLevel[%], BatteryVoltage[mV]";
+    return "Timestamp(UTC), Windspeed[m/s], BatteryLevel[%], BatteryVoltage[mV]";
 }
 
 void WindSpeed::updateWindspeedArray(float currentWindspeed)
