@@ -42,6 +42,7 @@ struct Settings
 // global variables
 Preferences preferences;
 WiFiManager wifiManager;
+M5GFX display;
 Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, DISPLAY_BRIGHTNESS, CHARGE_CURRENT};
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
@@ -421,7 +422,6 @@ void startButtonCallback(bool isAPEnabled)
     Serial.println("Start Button pressed, AP disabled");
   }
   isStartupActive = false;
-  playSound(1000);
 }
 
 void setupWindspeedIO()
@@ -524,6 +524,14 @@ void setup(void)
   windSpeed.setup();
   setupWindspeedIO();
   setupSoundModule();
+  setupLittleFS();
+
+  File pngLogo = LittleFS.open("/FxWindStartLogo.png", "r");
+  Serial.println("Logo size: " + String(pngLogo.size()));
+  display.begin();
+  display.drawPng(&pngLogo, 1, 18);
+  delay(3000);
+  display.clear();
 
   startupDisplay.setup(255);
   startupDisplay.setupStartButtonCallback(&startButtonCallback);
@@ -536,7 +544,6 @@ void setup(void)
   }
   setupWifi();
   setupNtpTimeSyncProvider();
-  setupLittleFS();
   setupServer();
   windSpeedDisplay.setup();
   setupPreferences();
