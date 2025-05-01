@@ -47,6 +47,7 @@ void StartupDisplay::draw()
     int buttonLine2StartY = 180;
     int headlineStartY = 5;
     int buttonColor = TFT_GREEN;
+    int disabledButtonColor = TFT_DARKGREY;
 
     _display.setFont(&fonts::DejaVu40);
     _display.drawString("FxWind", 75, headlineStartY);
@@ -55,15 +56,22 @@ void StartupDisplay::draw()
     _display.drawString("Date: " + getTimestampString(), buttonSpacing, 50);
     _display.drawString("Battery Level: " + String(M5.Power.getBatteryLevel()) + " %", buttonSpacing, 68);
 
-    if (_isAPEnabled)
+    if (_isWifiEnabled)
     {
         _display.fillRoundRect(buttonSpacing, buttonLine1StartY, buttonWidth, buttonHeight, 5, buttonColor);
-        _display.drawRoundRect(2 * buttonSpacing + buttonWidth, buttonLine1StartY, buttonWidth, buttonHeight, 5, buttonColor);
     }
     else
     {
         _display.drawRoundRect(buttonSpacing, buttonLine1StartY, buttonWidth, buttonHeight, 5, buttonColor);
-        _display.fillRoundRect(2 * buttonSpacing + buttonWidth, buttonLine1StartY, buttonWidth, buttonHeight, 5, buttonColor);
+    }
+
+    if (_isAPEnabled)
+    {
+        _display.fillRoundRect(2 * buttonSpacing + buttonWidth, buttonLine1StartY, buttonWidth, buttonHeight, 5, _isWifiEnabled ? buttonColor : disabledButtonColor);
+    }
+    else
+    {
+        _display.drawRoundRect(2 * buttonSpacing + buttonWidth, buttonLine1StartY, buttonWidth, buttonHeight, 5, _isWifiEnabled ? buttonColor : disabledButtonColor);
     }
 
     if (_isStartButtonPressed)
@@ -77,10 +85,9 @@ void StartupDisplay::draw()
 
     _display.setFont(&fonts::DejaVu24);
     int fontHeight = _display.fontHeight();
-    _display.drawString("AP", buttonSpacing + 30, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
-    _display.drawString("WiFi", 2 * buttonSpacing + buttonWidth + 20, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
+    _display.drawString("WiFi", buttonSpacing + 22, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
+    _display.drawString("AP", 2 * buttonSpacing + buttonWidth + 35, buttonLine1StartY + (buttonHeight - fontHeight) / 2);
     _display.drawString("START", buttonSpacing + 80, buttonLine2StartY + (buttonHeight - fontHeight) / 2);
-
     _display.display();
 }
 
@@ -109,7 +116,7 @@ void StartupDisplay::evaluateTouches()
                 Serial.println("Start Button released");
                 if (_startButtonCallback != nullptr)
                 {
-                    _startButtonCallback(_isAPEnabled);
+                    _startButtonCallback(_isWifiEnabled, _isAPEnabled);
                 }
                 _isStartButtonPressed = false;
                 draw();
@@ -118,20 +125,22 @@ void StartupDisplay::evaluateTouches()
 
         if (touchDetail.wasPressed())
         {
-            // AP Button pressed
+            // WiFi Button pressed
             if (touchDetail.x > buttonSpacing && touchDetail.x < buttonSpacing + buttonWidth && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
             {
-                Serial.println("AP Button pressed");
-                _isAPEnabled = true;
+                Serial.println("WiFi Button pressed");
+                _isWifiEnabled = !_isWifiEnabled;
                 draw();
             }
 
-            // Wifi Button pressed
+            // AP Button pressed
             if (touchDetail.x > 2 * buttonSpacing + buttonWidth && touchDetail.x < _display.width() - buttonSpacing && touchDetail.y > buttonLine1StartY && touchDetail.y < buttonLine1StartY + buttonHeight)
             {
-                Serial.println("WiFi Button pressed");
-                _isAPEnabled = false;
-                draw();
+                Serial.println("AP Button pressed");
+                if (_isWifiEnabled) {
+                    _isAPEnabled = !_isAPEnabled;
+                    draw();
+                }
             }
 
             // Start Button pressed
@@ -145,7 +154,7 @@ void StartupDisplay::evaluateTouches()
     }
 }
 
-void StartupDisplay::setupStartButtonCallback(std::function<void(bool)> startButtonCallback)
+void StartupDisplay::setupStartButtonCallback(std::function<void(bool, bool)> startButtonCallback)
 {
     _startButtonCallback = startButtonCallback;
 }

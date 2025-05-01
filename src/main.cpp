@@ -10,7 +10,6 @@
 #include <LittleFS.h>
 #include "WindSpeed.h"
 #include "WindSpeedDisplay.h"
-#include "BatteryDisplay.h"
 #include "StartupDisplay.h"
 #include <Preferences.h>
 
@@ -27,7 +26,6 @@
 #define PREFERENCE_NAMESPACE "fxwind"
 #define MDNSNAME "fxwind"
 #define AP_SSID "fxwind Accesspoint"
-#define NTP_SERVER1 "0.pool.ntp.org"
 
 // structs, enums
 struct Settings
@@ -47,7 +45,6 @@ M5GFX display;
 Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, DISPLAY_BRIGHTNESS, CHARGE_CURRENT};
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
-BatteryDisplay batteryDisplay;
 StartupDisplay startupDisplay;
 
 WiFiUDP Udp;
@@ -63,6 +60,9 @@ int menuX = 0;
 bool isAlarmActive = false;
 bool isStartupActive = true;
 bool isAPModeActive = true;
+bool isWifiOn = false;
+int touchDuration = 0;
+bool isSwitchoffSoundActive = false;
 
 static constexpr const char *menu_x_items[4] = {"Combined", "Plot", "Number", "Stats"};
 
@@ -286,7 +286,6 @@ String getTimestampString()
 String getStatusJson()
 {
 
-  
   JsonDocument jsonDocument;
 
   jsonDocument["BatteryLevel"] = M5.Power.getBatteryLevel();
@@ -360,9 +359,39 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
   }
 }
 
-void playSound(uint32_t duration = 4294967295U)
+void playSound(uint32_t duration = 4294967295U, float frequency = 440.0f)
 {
-  M5.Speaker.tone(440, duration);
+  M5.Speaker.tone(frequency, duration);
+}
+
+void playSwitchOffSound()
+{
+  if (!isSwitchoffSoundActive)
+  {
+    isSwitchoffSoundActive = true;
+    int delayTime = 200;
+    playSound(delayTime, 1320.0f);
+    M5.delay(delayTime);
+    playSound(delayTime, 880.0f);
+    M5.delay(delayTime);
+    playSound(delayTime, 440.0f);
+    M5.delay(delayTime);
+  }
+}
+
+void playSwitchOnSound()
+{
+  int delayTime = 200;
+  playSound(delayTime, 440.0f);
+  M5.delay(delayTime);
+  playSound(delayTime, 880.0f);
+  M5.delay(delayTime);
+  playSound(delayTime, 1320.0f);
+  M5.delay(delayTime);
+}
+
+void playAlarmSound() {
+    playSound();
 }
 
 void stopSound()
@@ -390,7 +419,6 @@ void setupDns()
 
 void setupWifi()
 {
-
   if (isAPModeActive)
   {
     const char *ssid = AP_SSID;
@@ -438,7 +466,8 @@ void setupNtpTimeSyncProvider()
   Serial.println("NTP Sync done");
 }
 
-void setupRtc() {
+void setupRtc()
+{
 
   if (!M5.Rtc.isEnabled())
   {
@@ -450,9 +479,12 @@ void setupRtc() {
   auto dt = M5.Rtc.getDateTime();
   Serial.printf("RTC before set   UTC  :%04d/%02d/%02d  %02d:%02d:%02d\r\n", dt.date.year, dt.date.month, dt.date.date, dt.time.hours, dt.time.minutes, dt.time.seconds);
 
-  if (isAPModeActive) {
+  if (!isWifiOn || isAPModeActive)
+  {
     setupRtcTimeSyncProvider();
-  } else {
+  }
+  else
+  {
     setupNtpTimeSyncProvider();
   }
 
@@ -463,22 +495,14 @@ void setupRtc() {
 
 void evaluationCallback()
 {
-  playSound();
   isAlarmActive = true;
+  playAlarmSound();
 }
 
-void startButtonCallback(bool isAPEnabled)
+void startButtonCallback(bool isWifiEnabled, bool isAPEnabled)
 {
-  if (isAPEnabled)
-  {
-    isAPModeActive = true;
-    Serial.println("Start Button pressed, AP enabled");
-  }
-  else
-  {
-    isAPModeActive = false;
-    Serial.println("Start Button pressed, AP disabled");
-  }
+  isAPModeActive = isAPEnabled;
+  isWifiOn = isWifiEnabled;
   isStartupActive = false;
 }
 
@@ -576,7 +600,8 @@ void setupPreferences()
   updateSettings();
 }
 
-void setupStartupLogo() {
+void setupStartupLogo()
+{
   File pngLogo = LittleFS.open("/FxWindStartLogo.png", "r");
   Serial.println("Logo size: " + String(pngLogo.size()));
   display.begin();
@@ -585,7 +610,9 @@ void setupStartupLogo() {
   display.clear();
 }
 
-void setupStartupDisplay() {
+void setupStartupDisplay()
+{
+  playSwitchOnSound();
   startupDisplay.setup(255);
   startupDisplay.setupStartButtonCallback(&startButtonCallback);
   startupDisplay.draw();
@@ -596,12 +623,29 @@ void setupStartupDisplay() {
   }
 }
 
-void setupM5(){
+void setupM5()
+{
   auto config = M5.config();
   config.external_speaker.atomic_spk = true;
   config.external_speaker.module_display = true;
   config.external_rtc = true;
   M5.begin();
+}
+
+void switchOffWifi()
+{
+  Serial.println("Stop Wifi");
+  esp_err_t results = esp_wifi_stop();
+}
+
+void switchOnWifi()
+{
+  Serial.println("Start Wifi");
+  esp_err_t results = esp_wifi_start();
+  if (!isAPModeActive)
+  {
+    WiFi.reconnect();
+  }
 }
 
 void setup(void)
@@ -612,13 +656,17 @@ void setup(void)
   setupWindspeedIO();
   setupSoundModule();
   setupLittleFS();
-  //setupStartupLogo();
+  // setupStartupLogo();
   setupStartupDisplay();
   setupWifi();
   setupRtc();
   setupServer();
   windSpeedDisplay.setup();
   setupPreferences();
+  if (!isWifiOn)
+  {
+    switchOffWifi();
+  }
 }
 
 void startDeepSleep()
@@ -669,9 +717,22 @@ void evaluateTouches()
         windSpeedDisplay.draw((DrawType)menuX);
       }
     }
-    if (touchDetail.wasHold())
+
+    if (touchDetail.wasPressed())
     {
-      stopSound();
+      Serial.println("Touch pressed... start timer");
+      touchDuration = millis();
+    }
+
+    if (touchDetail.wasReleased())
+    {
+      int duration = millis() - touchDuration;
+      Serial.println("Touch released... Duration: " + String(duration));
+      touchDuration = 0;
+      if (duration > 3000)
+      {
+        startDeepSleep();
+      }
     }
 
     if (touchDetail.wasDragged())
@@ -684,12 +745,6 @@ void evaluateTouches()
       stopSound();
       isAlarmActive = false;
     }
-
-    if (touchDetail.getClickCount() == 3)
-    {
-      wifiManager.resetSettings();
-      startDeepSleep();
-    }
   }
 }
 
@@ -699,13 +754,17 @@ void loop(void)
   M5.update();
   evaluateTouches();
 
+  if (touchDuration > 0 && (millis() - touchDuration) > 3000)
+  {
+    playSwitchOffSound();
+  }
+
   long currentMillis = millis();
   if (currentMillis - lastMillis >= SAMPLE_RATE)
   {
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw((DrawType)menuX);
-    // batteryDisplay.draw();
     Serial.printf("Level: %d, Voltage: %d, Current: %d, IsCharging:%d, ChargeCurrent: %.2f, isACin: %d \n", M5.Power.getBatteryLevel(), M5.Power.getBatteryVoltage(), M5.Power.getBatteryCurrent(), M5.Power.isCharging(), M5.Power.Axp192.getBatteryChargeCurrent(), M5.Power.Axp192.isACIN());
   }
 }
