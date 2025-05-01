@@ -49,7 +49,7 @@ void StartupDisplay::draw()
     int buttonColor = TFT_GREEN;
 
     _display.setFont(&fonts::DejaVu40);
-    _display.drawString("FxWind", 70, headlineStartY);
+    _display.drawString("FxWind", 75, headlineStartY);
 
     _display.setFont(&fonts::DejaVu12);
     _display.drawString("Date: " + getTimestampString(), buttonSpacing, 50);
