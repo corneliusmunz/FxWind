@@ -9,12 +9,12 @@ To mount the magnet we have to melt 2 Ruthex M3S Brass Threads into the controll
 ![Brass threads](images/assembly_02.jpeg)
 
 ## Magnet
-The magnet and spacer is mounted with two M3x6 countersunk screws. The magnet is part of the clamp body and the spacer is part of the countroller body.
+The magnet and spacer is mounted with two M3x6 countersunk screws. The magnet is part of the clamp body and the spacer is part of the controller body.
 
 ![Magnet mount](images/assembly_01.jpeg)
 
 ## Battery 
-The Battery out of the BOM is unfortunately delivered with a connector with the wrong polarity. So pay **ATTENTION** to solder the connector with the opposite polariy. Plus and Minus pole are marked on the controller board. Please check the polarity before connect the battery to the controller board. The battery connector should look as follows
+The Battery out of the BOM is unfortunately delivered with a connector with the wrong polarity. So pay **ATTENTION** to solder the connector with the opposite polariy. Plus and Minus poles are marked on the controller board. Please check the polarity before connect the battery to the controller board. The battery connector should look as follows
 ![Battery connector](images/assembly_03.jpeg)
 
 ## USB cable
