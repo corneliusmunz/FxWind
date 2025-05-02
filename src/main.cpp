@@ -12,6 +12,7 @@
 #include "WindSpeedDisplay.h"
 #include "StartupDisplay.h"
 #include <Preferences.h>
+#include "WifiConfigDisplay.h"
 
 // constants
 #define WINDSPEED_PIN 19
@@ -46,6 +47,7 @@ Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, D
 WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
 WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
 StartupDisplay startupDisplay;
+WifiConfigDisplay wifiConfigDisplay;
 
 WiFiUDP Udp;
 AsyncWebServer server(80);
@@ -417,6 +419,15 @@ void setupDns()
   }
 }
 
+void wifiManagerConfigModeCallback(WiFiManager *wifiManager)
+{
+  Serial.println("Entered wifi manager config mode");
+  Serial.println(WiFi.softAPIP());
+  Serial.println(wifiManager->getConfigPortalSSID());
+  wifiConfigDisplay.setup();
+  wifiConfigDisplay.draw(wifiManager->getConfigPortalSSID(), WiFi.softAPIP().toString());
+}
+
 void setupWifi()
 {
   if (isAPModeActive)
@@ -431,6 +442,7 @@ void setupWifi()
   {
     WiFi.mode(WIFI_MODE_STA);
     wifiManager.setHostname(hostname);
+    wifiManager.setAPCallback(wifiManagerConfigModeCallback);
     bool res;
 
     res = wifiManager.autoConnect(AP_SSID);
@@ -537,6 +549,14 @@ void handleSettings(AsyncWebServerRequest *request)
   request->send_P(200, "application/json", getSettingsJson().c_str());
 }
 
+void handleResetWifi(AsyncWebServerRequest *request)
+{
+  Serial.println("handleResetWifi");
+  wifiManager.resetSettings();
+  request->send(200, "text/plain", "Resetting WiFi settings");
+}
+
+
 void setupServer()
 {
 
@@ -554,9 +574,10 @@ void setupServer()
             { handleDownloadRequest(request); });
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", getSettingsJson().c_str()); });
-  server.on("/settings", HTTP_POST, handleSettings, nullptr, parseMyPageBody);
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "application/json", getStatusJson().c_str()); });
+  server.on("/settings", HTTP_POST, handleSettings, nullptr, parseMyPageBody);
+  server.on("/resetwifi", HTTP_POST, handleResetWifi);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 

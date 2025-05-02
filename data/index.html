@@ -109,7 +109,7 @@
             </div>
             <button type="submit">Save</button>
         </form>
-        <!-- <button id="resetWiFiButton" style="margin-top: 10px;">Reset WiFi</button> -->
+        <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
 
     </div>
 
@@ -477,6 +477,29 @@
                 console.error('Error sending settings:', error);
             }
         });
+
+    document.getElementById('resetWiFiButton').addEventListener('click', async (event) => {
+        event.preventDefault();
+        
+        try {
+            // Send the form data as a POST request to the /settings endpoint
+            const response = await fetch('./resetwifi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                console.log('WiFi successfully resetted');
+                evaluationThreshold = settings.threshold;
+            } else {
+                console.error('Failed to reset wifi settings:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error reset wifi settings:', error);
+        }
+    });
     </script>
 </body>
 
