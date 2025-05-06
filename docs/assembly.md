@@ -21,11 +21,11 @@ The Battery out of the BOM is unfortunately delivered with a connector with the 
 The USB cable which is used for charging the battery and flashing the software on the controller should be soldered together with the following mapping. 
 
 | USB female plug | M1250V-04P connector | Pin |
-| ---- | -------- | -------|
-| black | black | GND |
-| red | red | +5V |
-| white | yellow | D- |
-| blue | green | D+ |
+| --------------- | -------------------- | --- |
+| black           | black                | GND |
+| red             | red                  | +5V |
+| white           | yellow               | D-  |
+| blue            | green                | D+  |
 
 The soldered cable should look as follows
 ![USB cable](images/assembly_04.jpeg)

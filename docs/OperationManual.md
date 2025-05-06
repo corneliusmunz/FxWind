@@ -79,11 +79,11 @@ The webpage ist structured in the following tabs:
 ### Live Data
 In the *Live Data* tab, you can have an overview of the current wind speed, the wind speed in the past 300 seconds and the status:
 
-| Color | Status |
-| --------------- | -------------------- |
-| **GREEN**           | Windspeed has not reached threshold for longer than 20 seconds in the last 300 seconds                |
-| **YELLOW**             | Windspeed has at least once reached the threshold for longer than 20 seconds in the last 300 seconds                  |
-| **RED**           | Windspeed has reached at least 3 times the threshold for longer than 20 seconds in the last 300 seconds --> FAI rule for interruption of competion is reached               |
+| Color      | Status                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GREEN**  | Windspeed has not reached threshold for longer than 20 seconds in the last 300 seconds                                                                        |
+| **YELLOW** | Windspeed has at least once reached the threshold for longer than 20 seconds in the last 300 seconds                                                          |
+| **RED**    | Windspeed has reached at least 3 times the threshold for longer than 20 seconds in the last 300 seconds --> FAI rule for interruption of competion is reached |
 
 ![Live Data](images/OperationManual_LiveData.png)
 
@@ -95,10 +95,22 @@ In the *Download* tab you can see the list of all available *.csv files on the S
 
 ### Settings
 
-In the *Settings* tab you can 
+In the *Settings* tab you can change the following configuration parameters
+
+| Setting                     | Description                                             |
+| --------------------------- | ------------------------------------------------------- |
+| Threshold [m/s]             | FAI wind threshold 2..12 m/s                            |
+| Volume [%]                  | Speaker volume 0..100%                                  |
+| Maximum Charge current [mA] | Maximum charge current 100..1000 mA for 2000mAh battery |
+| Display Brightness [%]      | Display background brightness level 0..100%             |
+
+To reset/erase the saved WiFi settings, you can press the lower button.
+
 
 ![Settings](images/OperationManual_Settings.png)
 
 ### Status
+
+In the *Status* tab you can see the current status values of the device.
 
 ![Status](images/OperationManual_Status.png)
