@@ -1,5 +1,5 @@
 # FxWind Operation Manual
-![FxWind Logo](../data/FxWindStartLogo.png)
+![FxWind Logo](images/FxWindLogo.png)
 
 ## Power on/off
 To power on the device, just tap the screen. A short startup sound is played. To power off the device you have to press and hold the touchscreen for at least 3 seconds. If the three seconds are reached, a short shutoff sound is played and you can release your touch.
