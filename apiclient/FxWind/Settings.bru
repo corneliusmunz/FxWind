@@ -1,0 +1,11 @@
+meta {
+  name: Settings
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{hostname}}/settings
+  body: none
+  auth: inherit
+}

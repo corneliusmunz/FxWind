@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FxWind measurement</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>FxWind measurement</h1>
+    <div class="tabs">
+        <div class="tab active" data-tab="live-data">Live Data</div>
+        <div class="tab" data-tab="downloads">Downloads</div>
+        <div class="tab" data-tab="settings">Settings</div>
+        <div class="tab" data-tab="status">Status</div>
+    </div>
+
+    <div id="live-data" class="tab-content">
+        <div id="exceedingStatus" style="margin-top: 5px; padding: 5px; color: white; text-align: center;">
+            OK
+        </div>
+        <canvas id="chart"></canvas>
+        <div id="statistics" style="margin-top: 20px;">
+            <p><strong>Current:</strong> <span id="currentValue"></span> [m/s]</p>
+            <p><strong>Minimum:</strong> <span id="minValue"></span> [m/s]</p>
+            <p><strong>Maximum:</strong> <span id="maxValue"></span> [m/s]</p>
+            <p><strong>Average:</strong> <span id="avgValue"></span> [m/s]</p>
+            <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
+        </div>
+    </div>
+
+    <div id="downloads" class="tab-content hidden">
+        <ul id="fileList"></ul>
+    </div>
+
+    <div id="settings" class="tab-content hidden">
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="threshold">Threshold [m/s]</label>
+                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2"
+                    max="12">
+            </div>
+            <div class="form-group">
+                <label for="volume">Volume [%]</label>
+                <input type="number" id="volume" name="volume" placeholder="Speaker volume 0..100%" min="0" max="100">
+            </div>
+            <!-- <div class="form-group">
+                <label for="calibrationfactor">Calibration Value</label>
+                <input type="number" id="calibrationfactor" name="calibrationfactor"  placeholder="Calibration factor - currently not used" min="1" max="1">
+            </div> -->
+            <div class="form-group">
+                <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
+                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting"
+                    placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
+            </div>
+            <div class="form-group">
+                <label for="displayBrightnessSetting">Display Brightness [%]</label>
+                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting"
+                    placeholder="Display background brightness level 0..100%" min="30" max="100">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
+
+    </div>
+
+    <div id="status" class="tab-content">
+        <div id="status" style="margin-top: 20px;">
+            <p><strong>Current Datetime:</strong> <span id="dateTime"></span> (UTC)</p>
+            <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> [%]</p>
+            <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
+            <p><strong>Charging:</strong> <span id="isCharging"></span></p>
+            <p><strong>Charging Current:</strong> <span id="deviceCurrent"></span> [mA]</p>
+            <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
+            <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> [dB]</p>
+            <p><strong>Wifi Mode:</strong> <span id="wifiMode"></span></p>
+            <p><strong>Wifi SSID:</strong> <span id="wifiSSID"></span></p>
+            <p><strong>Wifi Hostname:</strong> <span id="wifiHostname"></span></p>
+        </div>
+    </div>
+
+    <script>
+
+        var evaluationThreshold = 4;
+        var fetchStatusIntervalId;
+        var fetchLiveDataIntervalId;
+        var fetchStatisticsIntervalId;
+
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                tabContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab).classList.remove('hidden');
+
+                // Fetch settings only when the "Settings" tab becomes active
+                if (tab.dataset.tab === 'settings') {
+                    fetchSettings();
+                    clearInterval(fetchStatusIntervalId);
+                }
+                else if (tab.dataset.tab === 'status') {
+                    fetchStatus();
+                    fetchStatusIntervalId = setInterval(fetchStatus, 1000);
+                    clearInterval(fetchLiveDataIntervalId);
+                    clearInterval(fetchStatisticsIntervalId);
+
+                }
+                else if (tab.dataset.tab === 'downloads') {
+                    fetchDownloadableFiles();
+                }
+                else if (tab.dataset.tab === 'live-data') {
+                    fetchLiveData();
+                    fetchStatistics();
+                    fetchLiveDataIntervalId = setInterval(fetchLiveData, 1000);
+                    fetchStatisticsIntervalId = setInterval(fetchStatistics, 1000);
+                    clearInterval(fetchStatusIntervalId);
+                }
+            });
+        });
+
+        // Chart.js - Line Chart
+        const ctx = document.getElementById('chart').getContext('2d');
+
+
+        const lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+
+                    {
+                        label: 'Windspeed',
+                        data: [],
+                        borderColor: 'green',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y2',
+                        segment: {
+                            borderColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                            backgroundColor: (part) => {
+                                const prevValue = part.p0.parsed.y // start value
+                                const nextValue = part.p1.parsed.y // end value
+                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                            },
+                        }
+                    }, {
+                        label: 'Exceeded Condition',
+                        data: [],
+                        borderColor: 'red',
+                        borderWidth: 2,
+                        stepped: true,
+                        yAxisID: 'y',
+                    }]
+            },
+            options: {
+                elements: {
+                    point: {
+                        pointStyle: false
+                    }
+                },
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Windspeed measurement [m/s] in the last 300s',
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 's'
+                        },
+                        type: 'linear',
+                    },
+                    y: {
+                        type: 'category',
+                        labels: ['NOT OK', 'OK'],
+                        offset: true,
+                        position: 'left',
+                        stack: 'windspeed',
+                        stackWeight: 1
+                    },
+                    y2: {
+                        title: {
+                            display: true,
+                            text: 'm/s'
+                        },
+                        stack: 'windspeed',
+                        stackWeight: 3,
+                    }
+                }
+            }
+        });
+
+        // Fetch live data from REST API
+        async function fetchLiveData() {
+            try {
+                const response = await fetch('./windspeed'); // Replace with your REST API endpoint
+                const data = await response.json();
+
+                // map colors dependent on data values
+                const colors = data.map((y) => y > evaluationThreshold ? 'red' : 'green');
+                lineChart.data.datasets[0].pointBorderColor = colors;
+                lineChart.data.datasets[0].pointBackgroundColor = colors;
+
+                // Map the data to subtract 300 from each x value
+                const mappedData = data.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
+
+                lineChart.data.datasets[0].data = mappedData;
+                lineChart.update();
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+            }
+        }
+
+        async function fetchStatistics() {
+            try {
+                const response = await fetch('./evaluation'); // Replace with your REST API endpoint
+                const data = await response.json();
+
+                // Update statistics values in the DOM
+                document.getElementById('currentValue').textContent = data.Current.toFixed(2);
+                document.getElementById('minValue').textContent = data.Min.toFixed(2);
+                document.getElementById('maxValue').textContent = data.Max.toFixed(2);
+                document.getElementById('avgValue').textContent = data.Average.toFixed(2);
+                document.getElementById('numberOfExceededRanges').textContent = data.ExceededRanges.length;
+
+                // Update background color based on the number of exceeding ranges
+                const exceedingStatusDiv = document.getElementById('exceedingStatus');
+                if (data.ExceededRanges.length >= 3) {
+                    exceedingStatusDiv.style.backgroundColor = 'red';
+                    exceedingStatusDiv.textContent = 'NOT OK';
+                } else if (data.ExceededRanges.length > 0) {
+                    exceedingStatusDiv.style.backgroundColor = 'orange';
+                    exceedingStatusDiv.textContent = 'WARNING';
+                } else {
+                    exceedingStatusDiv.style.backgroundColor = 'green';
+                    exceedingStatusDiv.textContent = 'Status: Normal';
+                }
+
+                var evaluationRanges = [];
+                for (let index = 0; index < 300; index++) {
+                    var point = { x: index, y: 'OK' };
+                    evaluationRanges.push(point);
+                }
+
+                if (data.ExceededRanges.length > 0) {
+                    var exceedingRanges = [];
+                    data.ExceededRanges.forEach(range => {
+                        range.StartIndex = range.StartIndex - 2 * (range.StartIndex - 150);
+                        range.StopIndex = range.StopIndex - 2 * (range.StopIndex - 150);
+                        if (range.StartIndex > range.StopIndex) {
+                            var tmp = range.StartIndex;
+                            range.StartIndex = range.StopIndex;
+                            range.StopIndex = tmp;
+                        }
+                        for (let index = range.StartIndex; index < range.StopIndex; index++) {
+                            var point = { x: index, y: 'NOT OK' };
+                            exceedingRanges.push(point);
+                        }
+                    });
+                    evaluationRanges = evaluationRanges.map(obj => exceedingRanges.find(o => o.x === obj.x) || obj);
+                }
+
+                const evaluationRangesMappedData = evaluationRanges.map(point => ({
+                    x: point.x - 300,
+                    y: point.y
+                }));
+                lineChart.data.datasets[1].data = evaluationRangesMappedData;
+                lineChart.update();
+
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+
+        // Fetch downloadable files
+        async function fetchDownloadableFiles() {
+            try {
+                const response = await fetch('./downloads'); // Replace with your REST API endpoint
+                const files = await response.json();
+
+                // Sort files by descending date
+                files.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                // Create table structure
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                // Add table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+      <tr>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Date</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filename</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Filesize</th>
+      </tr>
+    `;
+                table.appendChild(thead);
+
+                // Add table body
+                const tbody = document.createElement('tbody');
+                files.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Date}</td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
+          <a href="downloads?filename=${file.Filename}" download>${file.Filename}</a>
+        </td>
+        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">${file.Filesize}</td>
+      `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+
+                // Append table to fileList container
+                fileList.appendChild(table);
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        // Fetch settings from REST API and populate the form
+        async function fetchSettings() {
+            try {
+                const response = await fetch('./settings'); // Replace with your REST API endpoint
+                const settings = await response.json();
+                document.getElementById('threshold').value = settings.Threshold || '';
+                evaluationThreshold = settings.Threshold;
+                document.getElementById('volume').value = settings.Volume || '';
+                document.getElementById('maximumChargeCurrentSetting').value = settings.MaximumChargeCurrent || 1;
+                document.getElementById('displayBrightnessSetting').value = settings.DisplayBrightness || 2;
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+            }
+        }
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch('./status'); // Replace with your REST API endpoint
+                const data = await response.json();
+
+                // Update statistics values in the DOM
+                document.getElementById('batteryLevel').textContent = data.BatteryLevel.toFixed(0);
+                document.getElementById('deviceCurrent').textContent = data.Current.toFixed(0);
+                document.getElementById('isPowerConnected').textContent = data.IsPowerConnected;
+                document.getElementById('isCharging').textContent = data.IsCharging;
+                document.getElementById('wifiIpAddress').textContent = data.WifiIpAddress;
+                document.getElementById('wifiRssi').textContent = data.WifiRSSI.toFixed(0);
+                document.getElementById('wifiMode').textContent = data.WifiMode;
+                document.getElementById('wifiSSID').textContent = data.WifiSSID;
+                document.getElementById('wifiHostname').textContent = data.WifiHostname;
+                document.getElementById('dateTime').textContent = data.DateTime;
+            } catch (error) {
+                console.error('Error fetching status:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch settings and populate the settings form
+            fetchSettings();
+
+            // Fetch live data and statistics for the "Live Data" tab
+            fetchLiveData();
+            fetchStatistics();
+            fetchLiveDataIntervalId = setInterval(fetchLiveData, 1000);
+            fetchStatisticsIntervalId = setInterval(fetchStatistics, 1000);
+
+            // Fetch downloadable files for the "Downloads" tab
+            fetchDownloadableFiles();
+
+            // Set the default active tab to "Live Data"
+            document.querySelector('.tab[data-tab="live-data"]').classList.add('active');
+            document.getElementById('live-data').classList.remove('hidden');
+        });
+
+        // Handle settings form submission
+        document.getElementById('settingsForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const settings = Object.fromEntries(formData.entries());
+            var jsonSettings = {};
+            jsonSettings["Volume"] = settings.volume;
+            jsonSettings["Threshold"] = settings.threshold;
+            jsonSettings["CalibrationValue"] = settings.calibrationfactor;
+            jsonSettings["MaximumChargeCurrent"] = settings.maximumChargeCurrentSetting;
+            jsonSettings["DisplayBrightness"] = settings.displayBrightnessSetting;
+
+
+            try {
+                // Send the form data as a POST request to the /settings endpoint
+                const response = await fetch('./settings', {
+                    method: 'POST',
+                    body: JSON.stringify(jsonSettings),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Settings successfully updated');
+                    evaluationThreshold = settings.threshold;
+                } else {
+                    console.error('Failed to update settings:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error sending settings:', error);
+            }
+        });
+
+    document.getElementById('resetWiFiButton').addEventListener('click', async (event) => {
+        event.preventDefault();
+        
+        try {
+            // Send the form data as a POST request to the /settings endpoint
+            const response = await fetch('./resetwifi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                console.log('WiFi successfully resetted');
+                evaluationThreshold = settings.threshold;
+            } else {
+                console.error('Failed to reset wifi settings:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error reset wifi settings:', error);
+        }
+    });
+    </script>
+</body>
+
+</html>
