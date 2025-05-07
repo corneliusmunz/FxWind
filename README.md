@@ -1,4 +1,4 @@
-# FxWind Introduction
+# FxWind
 
 FxWind is a wind measurement tool for FAI Aeromodeling contests. In the FAI rules for 
 different contest classes like F3B, F3J, F3K, etc. there are defined rules under which wind
@@ -8,10 +8,12 @@ interrupted. FxWind will help you to comply with these competition rules.
 All HW and SW Parts are published as open source and could be used to build your own measurement
 tool. 
 
+Feel free to open an issue or participate in the development by opening a pull request.
+
 # Features
 
 * Battery powered. Last one complete competition day of  at least 10 hours
-* Recharchable by USB-C in 3-4 hours
+* Recharchable by USB-C in 2-3 hours
 * Additional Backup Power by USB-C
 * Magnetic connection between sensor and display, no wiring
 * 3D Printed parts for Microcontroller and accessories
@@ -19,25 +21,43 @@ tool.
 * Waterproof
 * Logging of Windspeed and Datetime on SD-Card for auditabilty, traceabiliy and possible complaints
 * 1s Sampling rate 
-* Wifi connection to display the windspeed conditions on a webpage
-* Time synchronisation with NTP server and local backup of date and time with a RTC
+* Wifi or Accesspoint connection to display the windspeed conditions on a webpage
+* Time synchronisation with NTP server and local backup of date and time with a Real Time Clock (RTC) 
 * Touch display with current windspeed and the needed ranges
-* Visualisation of regions in the time plot where the wind thresholds are exceeded
+* Visualisation of regions in the time plot where the wind thresholds has exceeded
 * Accustic alarm if the condition are met to interrupt a contest
 
 # How to use
+
+You can find the operation manual on the following link
+[Operation Manual](docs/OperationManual.md)
 
 # Setup
 
 ## Mechanical parts
 
+### CAD, STL Files 
+
+
+
 ## Wiring
 
 ## Assembly
 
+You can find the assembly instructions on the following link
+[Assembly Instructions](docs/assembly.md)
+
 ## Software
 
+### Setup LittleFS Filesystem
 
+For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-code-platformio-littlefs/
+
+
+# Ideas and open issues
+
+* Store snapshot if interruption criteria is reached
+* BLE connection 
 
 # Appendix
 
@@ -138,21 +158,6 @@ Extracts of the sporting codes of different FAI competition categories
 > CIAM General Rules).
 
 
-# Open issues
-
-
-
-# Misc
-
-
-## Setup LittleFS Filesystem
-
-For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-code-platformio-littlefs/
-
-
-
-
-
 ## Introduction
 ## BOM
 
@@ -177,30 +182,8 @@ For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-cod
 | Clamp | 1 | 3D printed part 
 
 
-## System Setup
-* Power on
-* Setup WiFi connection via local access point
-* 
-## Functions
-
-## Mechanical Setup
-### CAD, STL Files 
 
 
-## Assembly
-
-You can find the assembly instructions on the following link
-[Assembly Instructions](docs/assembly.md)
 
 
-## Ideas and ToDos
-
-* QR Code generation to get Link to webserver
-* Replace transmission of complete array and send only current value to webpage
-* Display current values and statisic values
-* Log files with timestamp
-* Prepare files for download 
-* Use WPS for Wifi connection
-* Different displays (number and statistic only, pure plot chart, mixed chart)
-* Settings page (time, threshold, sound volume, unit, wps button)
 
