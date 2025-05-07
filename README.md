@@ -1,11 +1,13 @@
 # FxWind
 
-![FxWind Display](docs/images/FxWind.jpeg)
+![FxWind Logo](docs/images/FxWindLogo.png)
 
 FxWind is a wind measurement tool for FAI Aeromodeling contests. In the FAI rules for 
 different contest classes like F3B, F3J, F3K, etc. there are defined rules under which wind
 conditions a contest can take place and under wich conditions a contest has to be 
 interrupted. FxWind will help you to comply with these competition rules.
+
+![FxWind Display](docs/images/FxWind.jpeg)
 
 All HW and SW Parts are published as open source and could be used to build your own measurement
 tool. 
