@@ -16,20 +16,20 @@ Feel free to open an issue or participate in the development by opening a pull r
 
 # Features
 
-* Battery powered. Last one complete competition day of  at least 10 hours
-* Recharchable by USB-C in 2-3 hours
-* Additional Backup Power by USB-C
-* Magnetic connection between sensor and display, no wiring
-* 3D Printed parts for Microcontroller and accessories
-* Simple Alloy tube as base rig
-* Waterproof
-* Logging of Windspeed and Datetime on SD-Card for auditabilty, traceabiliy and possible complaints
-* 1s Sampling rate 
-* Wifi or Accesspoint connection to display the windspeed conditions on a webpage
-* Time synchronisation with NTP server and local backup of date and time with a Real Time Clock (RTC) 
-* Touch display with current windspeed and the needed ranges
-* Visualisation of regions in the time plot where the wind thresholds has exceeded
-* Accustic alarm if the condition are met to interrupt a contest
+- [x] Battery powered. Last one complete competition day of  at least 10 hours
+- [x] Recharchable by USB-C in 2-3 hours
+- [x] Additional Backup Power by USB-C
+- [x] Magnetic connection between sensor and display, no wiring
+- [x] 3D Printed parts for Microcontroller and accessories
+- [x] Simple Alloy tube as base rig
+- [x] Waterproof
+- [x] Logging of Windspeed and Datetime on SD-Card for auditabilty, traceabiliy and possible complaints
+- [x] 1s Sampling rate 
+- [x] Wifi or Accesspoint connection to display the windspeed conditions on a webpage
+- [x] Time synchronisation with NTP server and local backup of date and time with a Real Time Clock (RTC) 
+- [x] Touch display with current windspeed and the needed ranges
+- [x] Visualisation of regions in the time plot where the wind thresholds has exceeded
+- [x] Accustic alarm if the condition are met to interrupt a contest
 
 # How to use
 
@@ -41,6 +41,8 @@ You can find the operation manual on the following link
 ## Mechanical setup
 
 The windspeed sensor and the controller with display are mounted on a alloy tube which has the specified height of 2m above the ground. The original controller case of the M5Tough device is replaced by a 3D printed part which contains the rechargeable battery, the magnetic connector, the USB-C port and the magnetic Pogo Pin connector for the electric connection to the wind sensor. The controller and USB-C Port is sealed with an O-ring to ensure the waterproof design. The alloy tube is splitted into two parts for better transportability and could be sticked together with a tube connector. 
+
+
 ![Overall setup](docs/images/OverallSetup.jpeg)
 ![Attached controller](docs/images/AttachedController.jpeg)
 ![Transport setup](docs/images/TransportFriendly.jpeg)
@@ -50,6 +52,7 @@ The windspeed sensor and the controller with display are mounted on a alloy tube
 ### CAD, STL Files 
 
 ## Electronic setup
+
 
 ### Wiring
 
