@@ -1,5 +1,7 @@
 # FxWind
 
+![FxWind Display](docs/images/FxWind.jpeg)
+
 FxWind is a wind measurement tool for FAI Aeromodeling contests. In the FAI rules for 
 different contest classes like F3B, F3J, F3K, etc. there are defined rules under which wind
 conditions a contest can take place and under wich conditions a contest has to be 
@@ -36,6 +38,13 @@ You can find the operation manual on the following link
 
 ## Mechanical setup
 
+The windspeed sensor and the controller with display are mounted on a alloy tube which has the specified height of 2m above the ground. The original controller case of the M5Tough device is replaced by a 3D printed part which contains the rechargeable battery, the magnetic connector, the USB-C port and the magnetic Pogo Pin connector for the electric connection to the wind sensor. The controller and USB-C Port is sealed with an O-ring to ensure the waterproof design. The alloy tube is splitted into two parts for better transportability and could be sticked together with a tube connector. 
+![Overall setup](docs/images/OverallSetup.jpeg)
+![Attached controller](docs/images/AttachedController.jpeg)
+![Transport setup](docs/images/TransportFriendly.jpeg)
+![Detailed setup](docs/images/DetailedSetup.jpeg)
+![Tube connector](docs/images/TubeConnector.jpeg)
+
 ### CAD, STL Files 
 
 ## Electronic setup
@@ -44,24 +53,24 @@ You can find the operation manual on the following link
 
 ## BOM
 
-| Part                           | Quantity | Description                                                         | Link                                   |
-| ------------------------------ | -------- | ------------------------------------------------------------------- | -------------------------------------- |
-| M5Tough                        | 1        | Microcontroller with Touchscreen                                    | https://docs.m5stack.com/en/core/tough |
-| 1S 2000mAh Lipo                | 1        |                                                                     | https://www.amazon.de/dp/B08TQSC5G9    |
-| Magnet                         | 1        | Magnet for connection between Controller and Base rig               | https://www.amazon.de/dp/B0BKWQX36P    |
-| Windspeed Sensor               | 1        | Windspeed sensor with impuls output and connection wiring           | https://www.amazon.de/dp/B0C2F5MGKZ    |
-| Magnetic 3pin Pogo connector   | 1        | Connection between Controller case and Base rig                     | https://www.amazon.de/dp/B0B1771YT4    |
-| USB-C Port                     | 1        | USB-C Port for SW upload and as input for battery charge            | https://www.amazon.de/dp/B0CZHDMFLZ    |
-| Ruthex M3S Brass Threads       | 6        | M3 Short Brass inserts for meltin into the 3D Printed parts         | https://www.amazon.de/dp/B09ZHSGHXD    |
-| M3x10 Flathead screw           | 4        | Threads for clamp                                                   |
-| M3x6 countersunk screw         | 2        | Threads for securing the magnet and the metal plate                 |
-| Alloy tube 30mm diameter       | 2m       | Base rig                                                            |
-| Base socket for Alloy tube     | 1        | 3D printed part [Base socket](construction/BottomStand.stl)         |
-| Windsensor socket              | 1        | 3D printed part [Windsensor socket](construction/TopStand.stl)      |
-| Controller case                | 1        | 3D printed part [Controller case](construction/FxWind_Case.stl)     |
-| Base plate for controller case | 1        | 3D printed part [Base plate](construction/FxWind_ClampCase.stl)     |
-| Clamp                          | 1        | 3D printed part [Clamp](construction/FxWind_Clamp.stl)              |
-| Tube connector                 | 1        | 3D printed part [Tube connector](construction/FxWind_Connector.stl) |
+| Part                           | Quantity | Description                                                 | Link                                                |
+| ------------------------------ | -------- | ----------------------------------------------------------- | --------------------------------------------------- |
+| M5Tough                        | 1        | Microcontroller with Touchscreen                            | https://docs.m5stack.com/en/core/tough              |
+| 1S 2000mAh Lipo                | 1        |                                                             | https://www.amazon.de/dp/B08TQSC5G9                 |
+| Magnet                         | 1        | Magnet for connection between Controller and Base rig       | https://www.amazon.de/dp/B0BKWQX36P                 |
+| Windspeed Sensor               | 1        | Windspeed sensor with impuls output and connection wiring   | https://www.amazon.de/dp/B0C2F5MGKZ                 |
+| Magnetic 3pin Pogo connector   | 1        | Connection between Controller case and Base rig             | https://www.amazon.de/dp/B0B1771YT4                 |
+| USB-C Port                     | 1        | USB-C Port for SW upload and as input for battery charge    | https://www.amazon.de/dp/B0CZHDMFLZ                 |
+| Ruthex M3S Brass Threads       | 6        | M3 Short Brass inserts for meltin into the 3D Printed parts | https://www.amazon.de/dp/B09ZHSGHXD                 |
+| M3x10 Flathead screw           | 4        | Threads for clamp                                           |                                                     |
+| M3x6 countersunk screw         | 2        | Threads for securing the magnet and the metal plate         |                                                     |
+| Alloy tube 30mm diameter       | 2m       | Base rig, 2x 1m length                                      |                                                     |
+| Base socket for Alloy tube     | 1        | 3D printed part                                             | [Base socket](construction/BottomStand.stl)         |
+| Windsensor socket              | 1        | 3D printed part                                             | [Windsensor socket](construction/TopStand.stl)      |
+| Controller case                | 1        | 3D printed part                                             | [Controller case](construction/FxWind_Case.stl)     |
+| Base plate for controller case | 1        | 3D printed part                                             | [Base plate](construction/FxWind_ClampCase.stl)     |
+| Clamp                          | 1        | 3D printed part                                             | [Clamp](construction/FxWind_Clamp.stl)              |
+| Tube connector                 | 1        | 3D printed part                                             | [Tube connector](construction/FxWind_Connector.stl) |
 
 
 ## Assembly
