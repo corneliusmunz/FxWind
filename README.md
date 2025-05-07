@@ -193,10 +193,6 @@ Extracts of the sporting codes of different FAI competition categories
 > CIAM General Rules).
 
 
-## Introduction
-
-
-
 
 
 
