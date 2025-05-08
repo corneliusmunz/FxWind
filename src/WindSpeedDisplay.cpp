@@ -132,6 +132,7 @@ void WindSpeedDisplay::drawStatus()
     _display.drawString("Current: " + String(M5.Power.getBatteryCurrent()) + " mA", 1, yPos + 5 * yPosDelta + 2 * spacer);
     _display.drawString("Wifi IP: " + WiFi.localIP().toString(), 1, yPos + 6 * yPosDelta + 4 * spacer);
     _display.drawString("Wifi RSSI: " + String(WiFi.RSSI()) + " dB", 1, yPos + 7 * yPosDelta + 4 * spacer);
+    _display.drawString("FW Version: " + String(FWVERSION), 1, yPos + 8 * yPosDelta + 4 * spacer);
   }
 
 void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeedEvaluation, int plotHeight, int evaluationBarHeight)

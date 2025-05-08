@@ -139,6 +139,7 @@
             <p><strong>Wifi Mode:</strong> <span id="wifiMode"></span></p>
             <p><strong>Wifi SSID:</strong> <span id="wifiSSID"></span></p>
             <p><strong>Wifi Hostname:</strong> <span id="wifiHostname"></span></p>
+            <p><strong>Firmware Version:</strong> <span id="firmwareVersion"></span></p>
         </div>
     </div>
 
@@ -435,6 +436,7 @@
                 document.getElementById('wifiSSID').textContent = data.WifiSSID;
                 document.getElementById('wifiHostname').textContent = data.WifiHostname;
                 document.getElementById('dateTime').textContent = data.DateTime;
+                document.getElementById('firmwareVersion').textContent = data.FirmwareVersion;
             } catch (error) {
                 console.error('Error fetching status:', error);
             }

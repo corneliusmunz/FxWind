@@ -302,6 +302,7 @@ String getStatusJson()
   jsonDocument["WifiSSID"] = isAPModeActive ? AP_SSID : "NONE";
   jsonDocument["WifiHostname"] = String("http://") + MDNSNAME + String(".local");
   jsonDocument["DateTime"] = getTimestampString();
+  jsonDocument["FirmwareVersion"] = String(FWVERSION);
 
   String jsonString;
   jsonDocument.shrinkToFit();
