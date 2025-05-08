@@ -13,6 +13,7 @@
 #include "StartupDisplay.h"
 #include <Preferences.h>
 #include "WifiConfigDisplay.h"
+#include <ESPAsyncHTTPUpdateServer.h>
 
 // constants
 #define WINDSPEED_PIN 19
@@ -50,6 +51,7 @@ StartupDisplay startupDisplay;
 WifiConfigDisplay wifiConfigDisplay;
 
 WiFiUDP Udp;
+ESPAsyncHTTPUpdateServer updateServer;
 AsyncWebServer server(80);
 unsigned long lastMillis;
 static const char *hostname = "f3xwind";
@@ -300,6 +302,7 @@ String getStatusJson()
   jsonDocument["WifiSSID"] = isAPModeActive ? AP_SSID : "NONE";
   jsonDocument["WifiHostname"] = String("http://") + MDNSNAME + String(".local");
   jsonDocument["DateTime"] = getTimestampString();
+  jsonDocument["FirmwareVersion"] = String(FWVERSION);
 
   String jsonString;
   jsonDocument.shrinkToFit();
@@ -326,7 +329,7 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
   int i;
   for (i = 0; i < headers; i++)
   {
-    AsyncWebHeader *h = request->getHeader(i);
+    const AsyncWebHeader *h = request->getHeader(i);
     Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
   }
 
@@ -347,7 +350,7 @@ void handleDownloadRequest(AsyncWebServerRequest *request)
     String filename2 = request->arg("filename");
     Serial.println(filename2);
     Serial.println("getParam");
-    AsyncWebParameter *parameter = request->getParam(0);
+    const AsyncWebParameter *parameter = request->getParam(0);
     Serial.println(parameter->name());
     Serial.println(parameter->value());
     String filename = request->getParam("filename")->value();
@@ -580,6 +583,17 @@ void setupServer()
   server.on("/resetwifi", HTTP_POST, handleResetWifi);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+
+  updateServer.setup(&server);
+
+  updateServer.onUpdateBegin = [](const UpdateType type, int &result)
+  {
+    Serial.println("Update started : " + String(type));
+  };
+  updateServer.onUpdateEnd = [](const UpdateType type, int &result)
+  {
+    Serial.println("Update finished : " + String(type) + " result: " + String(result));
+  };
 
   Serial.println("Server begin");
   server.begin();
