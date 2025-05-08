@@ -111,6 +111,20 @@
         </form>
         <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
 
+        <br>
+        <form action="/update?name=firmware" enctype=multipart/form-data method=POST>
+            Firmware:
+            <br>
+            <input type=file accept=.bin,.bin.gz name=firmware>
+            <input type=submit value="Update Firmware">
+        </form>
+        <form action="/update?name=filesystem" enctype=multipart/form-data method=POST>
+            FileSystem:
+            <br>
+            <input type=file accept=.bin,.bin.gz name=filesystem>
+            <input type=submit value="Update FileSystem">
+        </form>
+
     </div>
 
     <div id="status" class="tab-content">
@@ -478,28 +492,28 @@
             }
         });
 
-    document.getElementById('resetWiFiButton').addEventListener('click', async (event) => {
-        event.preventDefault();
-        
-        try {
-            // Send the form data as a POST request to the /settings endpoint
-            const response = await fetch('./resetwifi', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+        document.getElementById('resetWiFiButton').addEventListener('click', async (event) => {
+            event.preventDefault();
 
-            if (response.ok) {
-                console.log('WiFi successfully resetted');
-                evaluationThreshold = settings.threshold;
-            } else {
-                console.error('Failed to reset wifi settings:', response.statusText);
+            try {
+                // Send the form data as a POST request to the /settings endpoint
+                const response = await fetch('./resetwifi', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('WiFi successfully resetted');
+                    evaluationThreshold = settings.threshold;
+                } else {
+                    console.error('Failed to reset wifi settings:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error reset wifi settings:', error);
             }
-        } catch (error) {
-            console.error('Error reset wifi settings:', error);
-        }
-    });
+        });
     </script>
 </body>
 
