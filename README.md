@@ -53,7 +53,6 @@ The windspeed sensor and the controller with display are mounted on a alloy tube
 
 ## Electronic setup
 
-
 ### Wiring
 
 ## BOM
@@ -87,6 +86,8 @@ You can find the assembly instructions on the following link
 
 The software is based on the Arduino framework and is build, using the PlatformIO develompent environment.
 
+### Build
+
 ### Setup LittleFS Filesystem
 
 For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-code-platformio-littlefs/
@@ -94,8 +95,9 @@ For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-cod
 
 # Ideas and open issues
 
-* Store snapshot if interruption criteria is reached
-* BLE connection 
+- [ ] Store snapshot if interruption criteria is reached
+- [ ] BLE connection 
+- [ ] Over the Air update option
 
 # Appendix
 
