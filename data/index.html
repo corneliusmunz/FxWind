@@ -52,6 +52,78 @@
             padding: 5px;
             box-sizing: border-box;
         }
+
+        /* Button styling */
+        button,
+        .styled-button {
+            background-color: #007BFF;
+            /* Blue background */
+            color: white;
+            /* White text */
+            border: none;
+            /* Remove border */
+            padding: 10px 20px;
+            /* Add padding */
+            border-radius: 5px;
+            /* Rounded corners */
+            cursor: pointer;
+            /* Pointer cursor on hover */
+            font-size: 16px;
+            /* Increase font size */
+        }
+
+        button:hover,
+        .styled-button:hover {
+            background-color: #0056b3;
+            /* Darker blue on hover */
+        }
+
+        button:active,
+        .styled-button:active {
+            background-color: #003f7f;
+            /* Even darker blue when clicked */
+        }
+
+        button:disabled,
+        .styled-button:disabled {
+            background-color: #cccccc;
+            /* Gray background for disabled state */
+            cursor: not-allowed;
+            /* Not-allowed cursor for disabled button */
+        }
+
+        /* Style for file input fields */
+        input[type="file"] {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            /* Blue background */
+            border: none;
+            /* Remove border */
+            border-radius: 5px;
+            /* Rounded corners */
+            cursor: pointer;
+            /* Pointer cursor on hover */
+        }
+
+        input[type="file"]:hover {
+            background-color: #0056b3;
+            /* Darker blue on hover */
+        }
+
+        input[type="file"]:active {
+            background-color: #003f7f;
+            /* Even darker blue when clicked */
+        }
+
+        input[type="file"]:disabled {
+            background-color: #cccccc;
+            /* Gray background for disabled state */
+            cursor: not-allowed;
+            /* Not-allowed cursor for disabled input */
+        }
     </style>
 </head>
 
@@ -83,6 +155,7 @@
     </div>
 
     <div id="settings" class="tab-content hidden">
+        <h3>Settings</h3>
         <form id="settingsForm">
             <div class="form-group">
                 <label for="threshold">Threshold [m/s]</label>
@@ -109,20 +182,21 @@
             </div>
             <button type="submit">Save</button>
         </form>
+        <h3>WiFi</h3>
         <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
 
-        <br>
+        <h3>Firmware</h3>
         <form action="/update?name=firmware" enctype=multipart/form-data method=POST>
             Firmware:
             <br>
             <input type=file accept=.bin,.bin.gz name=firmware>
-            <input type=submit value="Update Firmware">
+            <input type=submit value="Update Firmware" class="styled-button">
         </form>
         <form action="/update?name=filesystem" enctype=multipart/form-data method=POST>
             FileSystem:
             <br>
             <input type=file accept=.bin,.bin.gz name=filesystem>
-            <input type=submit value="Update FileSystem">
+            <input type=submit value="Update FileSystem" class="styled-button">
         </form>
 
     </div>

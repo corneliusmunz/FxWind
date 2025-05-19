@@ -33,6 +33,7 @@ public:
     String getWindspeedJson();
     String getWindspeedEvaluationJson();
     String getWindspeedEvaluationString();
+    String getWindspeedEvaluationString(float windspeedValue);
     String getWindspeedString(bool addUnitSymbol = false);
     int getWindSpeedHistoryArrayElement(int i);
     String getTimestampString();
@@ -65,6 +66,15 @@ private:
     void writeFile(fs::FS &fs, const char *path, const char *message);
     void readFile(fs::FS &fs, const char *path);
     void createDir(fs::FS &fs, const char *path);
+    void storeSnapshot();
+    void storeJsonSnapshot();
+    void storeJsonEvaluationSnapshot();
+    void storeCsvSnapshot();
+    String getSnapshotCsvRow(time_t time, float windspeedValue, char separationChar = ',');
+    String getSnapshotFilePath(String fileType);
+    String getSnapshotLogFileHeader();
+    String getTimestampString(time_t time);
+    String getSnapshotBaseFilePath();
 };
 
 #endif

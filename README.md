@@ -4,7 +4,7 @@
 
 FxWind is a wind measurement tool for FAI Aeromodeling contests. In the FAI rules for 
 different contest classes like F3B, F3J, F3K, etc. there are defined rules under which wind
-conditions a contest can take place and under wich conditions a contest has to be 
+conditions a contest can take place and under which conditions a contest has to be 
 interrupted. FxWind will help you to comply with these competition rules.
 
 ![FxWind Display](docs/images/FxWind.jpeg)
@@ -16,7 +16,7 @@ Feel free to open an issue or participate in the development by opening a pull r
 
 # Features
 
-- [x] Battery powered. Last one complete competition day of  at least 10 hours
+- [x] Battery powered. Last one complete competition day of at least 12 hours
 - [x] Recharchable by USB-C in 2-3 hours
 - [x] Additional Backup Power by USB-C
 - [x] Magnetic connection between sensor and display, no wiring
@@ -95,9 +95,8 @@ For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-cod
 
 # Ideas and open issues
 
-- [ ] Store snapshot if interruption criteria is reached
 - [ ] BLE connection 
-- [ ] Over the Air update option
+- [ ] FAI categories support (automatically apply rules for selected category)
 
 # Appendix
 

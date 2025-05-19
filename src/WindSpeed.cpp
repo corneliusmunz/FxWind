@@ -174,6 +174,7 @@ void WindSpeed::evaluateWindspeed()
     {
         _isCallbackAlreadySent = true;
         _evaluationCallback();
+        storeSnapshot();
     }
 }
 
@@ -215,9 +216,47 @@ String WindSpeed::getWindspeedEvaluationString()
 String WindSpeed::getTimestampString()
 {
     time_t t = now();
+    return getTimestampString(t);
+}
+
+String WindSpeed::getTimestampString(time_t time)
+{
     char stringbuffer[100];
-    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
+    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(time), month(time), day(time), hour(time), minute(time), second(time));
     return String(stringbuffer);
+}
+
+void WindSpeed::storeCsvSnapshot()
+{
+    String csvFilePath = getSnapshotFilePath("csv");
+    time_t time = now();
+    if (!SD.exists(csvFilePath.c_str()))
+    {
+        writeLineToFile(SD, csvFilePath.c_str(), getSnapshotLogFileHeader().c_str());
+    }
+    for (size_t i = 0; i < _evaluationRange; i++)
+    {
+        appendLineToFile(SD, csvFilePath.c_str(), getSnapshotCsvRow(time - _evaluationRange + 1 + i, _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f, ',').c_str());
+    }
+}
+
+void WindSpeed::storeJsonSnapshot()
+{
+    String jsonFilePath = getSnapshotFilePath("json");
+    writeFile(SD, jsonFilePath.c_str(), getWindspeedJson().c_str());
+}
+
+void WindSpeed::storeJsonEvaluationSnapshot()
+{
+    String jsonEvaluationFilePath = getSnapshotBaseFilePath() + "_evaluation.json";
+    writeFile(SD, jsonEvaluationFilePath.c_str(), getWindspeedEvaluationJson().c_str());
+}
+
+void WindSpeed::storeSnapshot()
+{
+    storeJsonSnapshot();
+    storeJsonEvaluationSnapshot();
+    storeCsvSnapshot();
 }
 
 String WindSpeed::getWindspeedJson()
@@ -264,9 +303,32 @@ String WindSpeed::getWindspeedEvaluationJson()
     return jsonString;
 }
 
+String WindSpeed::getSnapshotCsvRow(time_t time, float windspeedValue, char separationChar)
+{
+    return getTimestampString(time) + separationChar + getWindspeedEvaluationSingleString(windspeedValue);
+}
+
 String WindSpeed::getLogCsvRow(char separationChar)
 {
     return getTimestampString() + separationChar + getWindspeedString() + separationChar + String(M5.Power.getBatteryLevel()) + separationChar + String(M5.Power.getBatteryVoltage());
+}
+
+String WindSpeed::getSnapshotBaseFilePath()
+{
+    time_t t = now();
+    char stringbuffer[100];
+    sprintf(stringbuffer, "/logs/%4u-%02u-%02u_%02u-%02u-%02u_windspeed_snapshot", year(t), month(t), day(t), hour(t), minute(t), second(t));
+    return String(stringbuffer);
+}
+
+String WindSpeed::getSnapshotFilePath(String fileType)
+{
+    return getSnapshotBaseFilePath() + "." + fileType;
+}
+
+String WindSpeed::getSnapshotLogFileHeader()
+{
+    return "Timestamp(UTC), Windspeed[m/s]";
 }
 
 String WindSpeed::getLogFilePath()
