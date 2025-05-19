@@ -230,14 +230,13 @@ void WindSpeed::storeCsvSnapshot()
 {
     String csvFilePath = getSnapshotFilePath("csv");
     time_t time = now();
-    if (!SD.exists(csvFilePath.c_str()))
-    {
-        writeLineToFile(SD, csvFilePath.c_str(), getSnapshotLogFileHeader().c_str());
-    }
+    String content;
+    content = getSnapshotLogFileHeader() + String("\r\n");
     for (size_t i = 0; i < _evaluationRange; i++)
     {
-        appendLineToFile(SD, csvFilePath.c_str(), getSnapshotCsvRow(time - _evaluationRange + 1 + i, _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f, ',').c_str());
+        content += getSnapshotCsvRow(time - _evaluationRange + 1 + i, _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f, ',') + String("\r\n");
     }
+    appendFile(SD, csvFilePath.c_str(), content.c_str());
 }
 
 void WindSpeed::storeJsonSnapshot()
