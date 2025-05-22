@@ -158,9 +158,25 @@
         <h3>Settings</h3>
         <form id="settingsForm">
             <div class="form-group">
-                <label for="threshold">Threshold [m/s]</label>
-                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2"
-                    max="12">
+                <label for="lowerWindspeedThreshold">Lower Threshold [m/s]</label>
+                <input type="number" id="lowerWindspeedThreshold" name="lowerWindspeedThreshold"
+                    placeholder="Lower FAI wind threshold 0..5 m/s" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="upperWindspeedThreshold">Upper Threshold [m/s]</label>
+                <input type="number" id="upperWindspeedThreshold" name="upperWindspeedThreshold"
+                    placeholder="Upper FAI wind threshold 2..25 m/s" min="2" max="25">
+            </div>
+            <div class="form-group">
+                <label for="windspeedDurationRange">Duration of Window [s]</label>
+                <input type="number" id="windspeedDurationRange" name="windspeedDurationRange"
+                    placeholder="Duration, how long the windspeed should be inside thresholds 10..120 s" min="10"
+                    max="120">
+            </div>
+            <div class="form-group">
+                <label for="windspeedNumberOfWindows">Number of Windows</label>
+                <input type="number" id="windspeedNumberOfWindows" name="windspeedNumberOfWindows"
+                    placeholder="Number of windows which should be reached for contest abortion 1..5" min="1" max="5">
             </div>
             <div class="form-group">
                 <label for="volume">Volume [%]</label>
@@ -219,7 +235,9 @@
 
     <script>
 
-        var evaluationThreshold = 4;
+        var upperEvaluationThreshold = 4;
+        var lowerEvaluationThreshold = 0;
+        var numberOfWindows = 3;
         var fetchStatusIntervalId;
         var fetchLiveDataIntervalId;
         var fetchStatisticsIntervalId;
@@ -282,12 +300,18 @@
                             borderColor: (part) => {
                                 const prevValue = part.p0.parsed.y // start value
                                 const nextValue = part.p1.parsed.y // end value
-                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                                return prevValue > upperEvaluationThreshold
+                                    || nextValue > upperEvaluationThreshold
+                                    || prevValue < lowerEvaluationThreshold
+                                    || nextValue < lowerEvaluationThreshold ? 'red' : 'green' // return with a color by rule
                             },
                             backgroundColor: (part) => {
                                 const prevValue = part.p0.parsed.y // start value
                                 const nextValue = part.p1.parsed.y // end value
-                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                                return prevValue > upperEvaluationThreshold
+                                    || nextValue > upperEvaluationThreshold
+                                    || prevValue < lowerEvaluationThreshold
+                                    || nextValue < lowerEvaluationThreshold ? 'red' : 'green' // return with a color by rule
                             },
                         }
                     }, {
@@ -350,7 +374,7 @@
                 const data = await response.json();
 
                 // map colors dependent on data values
-                const colors = data.map((y) => y > evaluationThreshold ? 'red' : 'green');
+                const colors = data.map((y) => y > upperEvaluationThreshold ? 'red' : 'green');
                 lineChart.data.datasets[0].pointBorderColor = colors;
                 lineChart.data.datasets[0].pointBackgroundColor = colors;
 
@@ -381,7 +405,7 @@
 
                 // Update background color based on the number of exceeding ranges
                 const exceedingStatusDiv = document.getElementById('exceedingStatus');
-                if (data.ExceededRanges.length >= 3) {
+                if (data.ExceededRanges.length >= numberOfWindows) {
                     exceedingStatusDiv.style.backgroundColor = 'red';
                     exceedingStatusDiv.textContent = 'NOT OK';
                 } else if (data.ExceededRanges.length > 0) {
@@ -484,8 +508,13 @@
             try {
                 const response = await fetch('./settings'); // Replace with your REST API endpoint
                 const settings = await response.json();
-                document.getElementById('threshold').value = settings.Threshold || '';
-                evaluationThreshold = settings.Threshold;
+                document.getElementById('lowerWindspeedThreshold').value = settings.LowerWindspeedThreshold || 0;
+                document.getElementById('upperWindspeedThreshold').value = settings.UpperWindspeedThreshold || 8;
+                document.getElementById('windspeedDurationRange').value = settings.WindspeedDurationRange || 20;
+                document.getElementById('windspeedNumberOfWindows').value = settings.WindspeedNumberOfWindows || 3;
+                upperEvaluationThreshold = settings.UpperWindspeedThreshold || 8;
+                lowerEvaluationThreshold = settings.LowerWindspeedThreshold || 0;
+                numberOfWindows = settings.WindspeedNumberOfWindows || 3;
                 document.getElementById('volume').value = settings.Volume || '';
                 document.getElementById('maximumChargeCurrentSetting').value = settings.MaximumChargeCurrent || 1;
                 document.getElementById('displayBrightnessSetting').value = settings.DisplayBrightness || 2;
@@ -541,8 +570,11 @@
             const settings = Object.fromEntries(formData.entries());
             var jsonSettings = {};
             jsonSettings["Volume"] = settings.volume;
-            jsonSettings["Threshold"] = settings.threshold;
-            jsonSettings["CalibrationValue"] = settings.calibrationfactor;
+            jsonSettings["LowerWindspeedThreshold"] = settings.lowerWindspeedThreshold;
+            jsonSettings["UpperWindspeedThreshold"] = settings.upperWindspeedThreshold;
+            jsonSettings["WindspeedDurationRange"] = settings.windspeedDurationRange;
+            jsonSettings["WindspeedNumberOfWindows"] = settings.windspeedNumberOfWindows;
+            // jsonSettings["CalibrationValue"] = settings.calibrationfactor;
             jsonSettings["MaximumChargeCurrent"] = settings.maximumChargeCurrentSetting;
             jsonSettings["DisplayBrightness"] = settings.displayBrightnessSetting;
 
@@ -559,7 +591,9 @@
 
                 if (response.ok) {
                     console.log('Settings successfully updated');
-                    evaluationThreshold = settings.threshold;
+                    lowerEvaluationThreshold = settings.lowerWindspeedThreshold;
+                    upperEvaluationThreshold = settings.upperWindspeedThreshold;
+                    numberOfWindows = settings.windspeedNumberOfWindows;
                 } else {
                     console.error('Failed to update settings:', response.statusText);
                 }
@@ -582,7 +616,7 @@
 
                 if (response.ok) {
                     console.log('WiFi successfully resetted');
-                    evaluationThreshold = settings.threshold;
+                    upperEvaluationThreshold = settings.threshold;
                 } else {
                     console.error('Failed to reset wifi settings:', response.statusText);
                 }

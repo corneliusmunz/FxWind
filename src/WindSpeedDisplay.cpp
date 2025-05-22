@@ -1,9 +1,10 @@
 #include "WindSpeedDisplay.h"
 
-WindSpeedDisplay::WindSpeedDisplay(uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange, WindSpeed *windSpeed)
+WindSpeedDisplay::WindSpeedDisplay(uint16_t lowerWindspeedThreshold, uint16_t upperWindspeedThreshold, uint16_t evaluationRange, uint16_t windspeedDurationRange, WindSpeed *windSpeed)
 {
     _evaluationRange = evaluationRange;
-    _windspeedThreshold = windspeedThreshold;
+    _lowerWindspeedThreshold = lowerWindspeedThreshold;
+    _upperWindspeedThreshold = upperWindspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
     _windSpeed = windSpeed;
     _currentDrawType = DrawType::COMBINED;
@@ -27,9 +28,10 @@ void WindSpeedDisplay::setup()
     }
 }
 
-void WindSpeedDisplay::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, int brightness)
+void WindSpeedDisplay::updateSettings(uint16_t lowerWindspeedThreshold, uint16_t upperWindspeedThreshold, uint16_t evaluationRange, uint16_t windspeedDurationRange, int brightness)
 {
-    _windspeedThreshold = windspeedThreshold;
+    _lowerWindspeedThreshold = lowerWindspeedThreshold;
+    _upperWindspeedThreshold = upperWindspeedThreshold;
     _windspeedDurationRange = windspeedDurationRange;
     _display.setBrightness((int)(brightness/100.0f*255.0f));
 }
@@ -145,7 +147,7 @@ void WindSpeedDisplay::drawValues(float windspeed, WindspeedEvaluation windspeed
     {
         yPos = (int)(_display.height() / 2.0) - (int)(bigFontHeight / 2.0) - 9;
     }
-    if (windspeed > _windspeedThreshold)
+    if (windspeed > _upperWindspeedThreshold || windspeed < _lowerWindspeedThreshold)
     {
         _display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
     }
@@ -193,7 +195,7 @@ void WindSpeedDisplay::drawBarPlot(int plotHeight)
         int xValueScaledLimited = min(xValueScaled, plotHeight);
 
         _display.drawFastVLine(xpos, PLOT_OFFSET_Y, plotHeight, TFT_BLACK);
-        if (xValue >= _windspeedThreshold * 10)
+        if (xValue > _upperWindspeedThreshold * 10 || xValue < _lowerWindspeedThreshold * 10)
         {
             _display.drawFastVLine(xpos, PLOT_OFFSET_Y + plotHeight - xValueScaledLimited, xValueScaledLimited, PLOT_BAR_ALERT_COLOR);
         }
@@ -211,10 +213,11 @@ void WindSpeedDisplay::drawEvaluationBars(WindspeedEvaluation windspeedEvaluatio
     _display.setTextColor(TXT_DEFAULT_COLOR, TXT_ALERT_BACKGROUND_COLOR);
     int y = PLOT_OFFSET_Y + plotHeight + 3;
     _display.fillRect(PLOT_OFFSET_X - 1, y, _evaluationRange, evaluationBarHeight, TFT_GREEN);
+    int numberTextXOffset = (int) (_windspeedDurationRange - 10)/2 + 1;
     for (size_t i = 0; i < windspeedEvaluation.NumberOfExceededRanges; i++)
     {
         int x = PLOT_OFFSET_X + _evaluationRange - windspeedEvaluation.RangeStartIndex[i] - _windspeedDurationRange;
         _display.fillRect(x, y, _windspeedDurationRange, evaluationBarHeight, TFT_RED);
-        _display.drawString(String(i + 1), x + 7, y + evaluationBarHeight / 5);
+        _display.drawString(String(i + 1), x + numberTextXOffset, y + evaluationBarHeight / 5);
     }
 }

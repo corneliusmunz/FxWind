@@ -17,10 +17,12 @@
 
 // constants
 #define WINDSPEED_PIN 19
-#define EVALUATION_RANGE 300
+#define WINDSPEED_EVALUATION_RANGE 300
 #define SAMPLE_RATE 1000            // ms
-#define WINDSPEED_THRESHOLD 8       // m/s
+#define WINDSPEED_LOWER_THRESHOLD 0 // m/s
+#define WINDSPEED_UPPER_THRESHOLD 8       // m/s
 #define WINDSPEED_DURATION_RANGE 20 // samples
+#define WINDSPEED_NUMBER_OF_WINDOWS 3
 #define TIME_SYNC_INTERVAL 600
 #define VOLUME 100            // %
 #define DISPLAY_BRIGHTNESS 50 // %
@@ -34,8 +36,11 @@ struct Settings
 {
   int Volume;
   int CalibrationFactor;
-  int Threshold;
-  int DurationRange;
+  int LowerWindspeedThreshold;
+  int UpperWindspeedThreshold;
+  int WindspeedEvaluationRange;
+  int WindspeedDurationRange;
+  int WindspeedNumberOfWindows;
   int DisplayBrightness;
   int MaximumChargeCurrent;
 };
@@ -44,9 +49,9 @@ struct Settings
 Preferences preferences;
 WiFiManager wifiManager;
 M5GFX display;
-Settings settings = {VOLUME, 1, WINDSPEED_THRESHOLD, WINDSPEED_DURATION_RANGE, DISPLAY_BRIGHTNESS, CHARGE_CURRENT};
-WindSpeed windSpeed(WINDSPEED_PIN, EVALUATION_RANGE, settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
-WindSpeedDisplay windSpeedDisplay(EVALUATION_RANGE, settings.Threshold, settings.DurationRange, &windSpeed);
+Settings settings = {VOLUME, 1, WINDSPEED_LOWER_THRESHOLD, WINDSPEED_UPPER_THRESHOLD, WINDSPEED_EVALUATION_RANGE, WINDSPEED_DURATION_RANGE, WINDSPEED_NUMBER_OF_WINDOWS, DISPLAY_BRIGHTNESS, CHARGE_CURRENT};
+WindSpeed windSpeed(WINDSPEED_PIN, settings.LowerWindspeedThreshold, settings.UpperWindspeedThreshold, settings.WindspeedDurationRange, settings.WindspeedEvaluationRange, settings.WindspeedNumberOfWindows, settings.CalibrationFactor);
+WindSpeedDisplay windSpeedDisplay(settings.LowerWindspeedThreshold, settings.UpperWindspeedThreshold, settings.WindspeedEvaluationRange, settings.WindspeedDurationRange, &windSpeed);
 StartupDisplay startupDisplay;
 WifiConfigDisplay wifiConfigDisplay;
 
@@ -267,9 +272,12 @@ String getSettingsJson()
   JsonDocument jsonDocument;
 
   jsonDocument["Volume"] = settings.Volume;
-  jsonDocument["Threshold"] = settings.Threshold;
+  jsonDocument["LowerWindspeedThreshold"] = settings.LowerWindspeedThreshold;
+  jsonDocument["UpperWindspeedThreshold"] = settings.UpperWindspeedThreshold;
+  jsonDocument["WindspeedDurationRange"] = settings.WindspeedDurationRange;
+  jsonDocument["WindspeedEvaluationRange"] = settings.WindspeedEvaluationRange;
+  jsonDocument["WindspeedNumberOfWindows"] = settings.WindspeedNumberOfWindows;
   jsonDocument["CalibrationFactor"] = settings.CalibrationFactor;
-  jsonDocument["DurationRange"] = settings.DurationRange;
   jsonDocument["DisplayBrightness"] = settings.DisplayBrightness;
   jsonDocument["MaximumChargeCurrent"] = settings.MaximumChargeCurrent;
 
@@ -312,8 +320,8 @@ String getStatusJson()
 
 void updateSettings()
 {
-  windSpeed.updateSettings(settings.Threshold, settings.DurationRange, settings.CalibrationFactor);
-  windSpeedDisplay.updateSettings(settings.Threshold, settings.DurationRange, settings.DisplayBrightness);
+  windSpeed.updateSettings(settings.LowerWindspeedThreshold, settings.UpperWindspeedThreshold, settings.WindspeedDurationRange, settings.WindspeedEvaluationRange, settings.WindspeedNumberOfWindows, settings.CalibrationFactor);
+  windSpeedDisplay.updateSettings(settings.LowerWindspeedThreshold, settings.UpperWindspeedThreshold, settings.WindspeedEvaluationRange, settings.WindspeedDurationRange, settings.DisplayBrightness);
   updateVolume();
   M5.Power.Axp192.setChargeCurrent(settings.MaximumChargeCurrent);
   saveSettings();
@@ -533,14 +541,18 @@ void parseMyPageBody(AsyncWebServerRequest *req, uint8_t *data, size_t len, size
   DynamicJsonDocument bodyJSON(1024);
   deserializeJson(bodyJSON, data, len);
   int volume = bodyJSON["Volume"];
-  int threshold = bodyJSON["Threshold"];
-  int calibrationValue = bodyJSON["CalibrationValue"];
+  int lowerWindspeedThreshold = bodyJSON["LowerWindspeedThreshold"];
+  int upperWindspeedThreshold = bodyJSON["UpperWindspeedThreshold"];
+  settings.WindspeedDurationRange = bodyJSON["WindspeedDurationRange"];
+  settings.WindspeedNumberOfWindows = bodyJSON["WindspeedNumberOfWindows"];
+  // int calibrationValue = bodyJSON["CalibrationValue"];
   int displayBrightness = bodyJSON["DisplayBrightness"];
   int maximumChargeCurrent = bodyJSON["MaximumChargeCurrent"];
-  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", volume, threshold, calibrationValue, maximumChargeCurrent, displayBrightness);
+  Serial.printf("Volume: %d, LowerWindspeedTreshold: %d, UpperWindspeedTreshold: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", volume, lowerWindspeedThreshold, upperWindspeedThreshold, maximumChargeCurrent, displayBrightness);
   settings.Volume = volume;
-  settings.Threshold = threshold;
-  settings.CalibrationFactor = calibrationValue;
+  settings.LowerWindspeedThreshold = lowerWindspeedThreshold;
+  settings.UpperWindspeedThreshold = upperWindspeedThreshold;
+  // settings.CalibrationFactor = calibrationValue;
   settings.DisplayBrightness = displayBrightness;
   settings.MaximumChargeCurrent = maximumChargeCurrent;
   updateSettings();
@@ -611,11 +623,14 @@ void saveSettings()
 {
   preferences.begin(PREFERENCE_NAMESPACE, false);
   preferences.putInt("Volume", settings.Volume);
-  preferences.putInt("Threshold", settings.Threshold);
+  preferences.putInt("LowerThreshold", settings.LowerWindspeedThreshold);
+  preferences.putInt("UpperThreshold", settings.UpperWindspeedThreshold);
+  preferences.putInt("DurationRange", settings.WindspeedDurationRange);
+  preferences.putInt("EvaluationRange", settings.WindspeedEvaluationRange);
+  preferences.putInt("NumberOfWindows", settings.WindspeedNumberOfWindows);
   preferences.putInt("Calibration", settings.CalibrationFactor);
   preferences.putInt("Brightness", settings.DisplayBrightness);
   preferences.putInt("MaxCurrent", settings.MaximumChargeCurrent);
-  preferences.putInt("DurationRange", settings.DurationRange);
   preferences.end();
   Serial.println("Preferences saved");
 }
@@ -624,13 +639,16 @@ void setupPreferences()
 {
   preferences.begin(PREFERENCE_NAMESPACE, false);
   settings.Volume = preferences.getInt("Volume", VOLUME);
-  settings.Threshold = preferences.getInt("Threshold", WINDSPEED_THRESHOLD);
+  settings.LowerWindspeedThreshold = preferences.getInt("LowerThreshold", WINDSPEED_LOWER_THRESHOLD);
+  settings.UpperWindspeedThreshold = preferences.getInt("UpperThreshold", WINDSPEED_UPPER_THRESHOLD);
+  settings.WindspeedDurationRange = preferences.getInt("DurationRange", WINDSPEED_DURATION_RANGE);
+  settings.WindspeedEvaluationRange = preferences.getInt("EvaluationRange", WINDSPEED_EVALUATION_RANGE);
+  settings.WindspeedNumberOfWindows = preferences.getInt("NumberOfWindows", WINDSPEED_NUMBER_OF_WINDOWS);
   settings.CalibrationFactor = preferences.getInt("Calibration", 1);
   settings.DisplayBrightness = preferences.getInt("Brightness", DISPLAY_BRIGHTNESS);
   settings.MaximumChargeCurrent = preferences.getInt("MaxCurrent", CHARGE_CURRENT);
-  settings.DurationRange = preferences.getInt("DurationRange", WINDSPEED_DURATION_RANGE);
-  Serial.printf("Volume: %d, Threshold: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", settings.Volume, settings.Threshold, settings.CalibrationFactor, settings.MaximumChargeCurrent, settings.DisplayBrightness);
-  preferences.end();
+  Serial.printf("Volume: %d, LowerThreshold: %d, UpperThreshold: %d, DurationRange: %d, EvaluationRange: %d, NumberOfWindows: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", settings.Volume, settings.UpperWindspeedThreshold, settings.LowerWindspeedThreshold, settings.WindspeedDurationRange, settings.WindspeedEvaluationRange, settings.WindspeedNumberOfWindows, settings.CalibrationFactor, settings.MaximumChargeCurrent, settings.DisplayBrightness);
+  preferences.end(); 
   saveSettings();
   updateSettings();
 }
@@ -691,7 +709,6 @@ void setup(void)
   setupWindspeedIO();
   setupSoundModule();
   setupLittleFS();
-  // setupStartupLogo();
   setupStartupDisplay();
   setupWifi();
   setupRtc();

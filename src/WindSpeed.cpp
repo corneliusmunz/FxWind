@@ -1,12 +1,14 @@
 #include "WindSpeed.h"
 
-WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
+WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t windspeedLowerThreshold, uint16_t windspeedUpperThreshold, uint16_t windspeedDurationRange, uint16_t evaluationRange, uint16_t numberOfWindowsThreshold, uint16_t calibrationFactor)
 {
     _sensorPin = sensorPin;
     pinMode(_sensorPin, INPUT_PULLUP);
     _evaluationRange = evaluationRange;
-    _windspeedThreshold = windspeedThreshold;
+    _windspeedLowerThreshold = windspeedLowerThreshold;
+    _windspeedUpperThreshold = windspeedUpperThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _numberOfWindowsThreshold = numberOfWindowsThreshold;
     _calibrationFactor = calibrationFactor;
 }
 
@@ -15,10 +17,13 @@ void WindSpeed::setup()
     setupSDCard();
 }
 
-void WindSpeed::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
+void WindSpeed::updateSettings(uint16_t windspeedLowerThreshold, uint16_t windspeedUpperThreshold, uint16_t windspeedDurationRange, uint16_t evaluationRange, uint16_t numberOfWindowsThreshold, uint16_t calibrationFactor)
 {
-    _windspeedThreshold = windspeedThreshold;
+    _windspeedLowerThreshold = windspeedLowerThreshold;
+    _windspeedUpperThreshold = windspeedUpperThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _evaluationRange = evaluationRange;
+    _numberOfWindowsThreshold = numberOfWindowsThreshold;
     _calibrationFactor = calibrationFactor;
 }
 
@@ -95,7 +100,8 @@ void WindSpeed::calculateWindspeed(bool evaluate, bool log)
 
 float WindSpeed::getCurrentWindspeed()
 {
-    return (float)_windspeedHistoryArray[0] / 10.0f;
+    float currentWindspeed = ((float)_windspeedHistoryArray[0] / 10.0f);
+    return currentWindspeed;
 }
 
 WindspeedEvaluation WindSpeed::getWindspeedEvaluation()
@@ -117,9 +123,16 @@ void WindSpeed::evaluateWindspeed()
 
     int rangeCounter = 0;
     int exceededRangesCounter = 0;
-    int exceededRangesIndex[15];
+    int numberOfRanges = _evaluationRange / _windspeedDurationRange;
+    int exceededRangesIndex[numberOfRanges];
 
-    for (size_t i = 0; i < 15; i++)
+    for (size_t i = 0; i < 30; i++)
+    {
+        _windspeedEvaluation.RangeStartIndex[i] = 0;
+        _windspeedEvaluation.RangeStopIndex[i] = 0;
+    }
+
+    for (size_t i = 0; i < numberOfRanges; i++)
     {
         exceededRangesIndex[i] = 0;
     }
@@ -137,7 +150,8 @@ void WindSpeed::evaluateWindspeed()
         }
         sumWindspeed += _windspeedHistoryArray[i];
 
-        if (_windspeedHistoryArray[i] > _windspeedThreshold * 10)
+        if (_windspeedHistoryArray[i] < _windspeedLowerThreshold * 10 
+            || _windspeedHistoryArray[i] > _windspeedUpperThreshold * 10)
         {
             rangeCounter++;
         }
@@ -149,7 +163,8 @@ void WindSpeed::evaluateWindspeed()
             rangeCounter = 0;
         }
 
-        if (_windspeedHistoryArray[i] <= _windspeedThreshold * 10)
+        if (_windspeedHistoryArray[i] >= _windspeedLowerThreshold * 10 
+            && _windspeedHistoryArray [i] <= _windspeedUpperThreshold * 10)
         {
             rangeCounter = 0;
         }
@@ -159,18 +174,18 @@ void WindSpeed::evaluateWindspeed()
     _windspeedEvaluation.MaxWindspeed = (float)maxWindspeed / 10.0f;
     _windspeedEvaluation.MinWindspeed = (float)minWindspeed / 10.0f;
     _windspeedEvaluation.AverageWindspeed = (float)(sumWindspeed / _evaluationRange) / 10.0f;
-    for (size_t i = 0; i < 15; i++)
+    for (size_t i = 0; i < numberOfRanges; i++)
     {
         _windspeedEvaluation.RangeStartIndex[i] = exceededRangesIndex[i];
         _windspeedEvaluation.RangeStopIndex[i] = exceededRangesIndex[i] + _windspeedDurationRange;
     }
 
-    if (exceededRangesCounter < _numberOfRangesThreshold)
+    if (exceededRangesCounter < _numberOfWindowsThreshold)
     {
         _isCallbackAlreadySent = false;
     }
 
-    if (exceededRangesCounter >= _numberOfRangesThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
+    if (exceededRangesCounter >= _numberOfWindowsThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
     {
         _isCallbackAlreadySent = true;
         _evaluationCallback();
@@ -349,7 +364,8 @@ void WindSpeed::updateWindspeedArray(float currentWindspeed)
     {
         _windspeedHistoryArray[i] = _windspeedHistoryArray[i - 1];
     }
-    _windspeedHistoryArray[0] = (int)(currentWindspeed * 10.0f);
+    int calculatedWindspeed = (int)(currentWindspeed * 10.0f);
+    _windspeedHistoryArray[0] = calculatedWindspeed;
 }
 
 void WindSpeed::createDir(fs::FS &fs, const char *path)
