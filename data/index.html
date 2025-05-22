@@ -52,6 +52,78 @@
             padding: 5px;
             box-sizing: border-box;
         }
+
+        /* Button styling */
+        button,
+        .styled-button {
+            background-color: #007BFF;
+            /* Blue background */
+            color: white;
+            /* White text */
+            border: none;
+            /* Remove border */
+            padding: 10px 20px;
+            /* Add padding */
+            border-radius: 5px;
+            /* Rounded corners */
+            cursor: pointer;
+            /* Pointer cursor on hover */
+            font-size: 16px;
+            /* Increase font size */
+        }
+
+        button:hover,
+        .styled-button:hover {
+            background-color: #0056b3;
+            /* Darker blue on hover */
+        }
+
+        button:active,
+        .styled-button:active {
+            background-color: #003f7f;
+            /* Even darker blue when clicked */
+        }
+
+        button:disabled,
+        .styled-button:disabled {
+            background-color: #cccccc;
+            /* Gray background for disabled state */
+            cursor: not-allowed;
+            /* Not-allowed cursor for disabled button */
+        }
+
+        /* Style for file input fields */
+        input[type="file"] {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            /* Blue background */
+            border: none;
+            /* Remove border */
+            border-radius: 5px;
+            /* Rounded corners */
+            cursor: pointer;
+            /* Pointer cursor on hover */
+        }
+
+        input[type="file"]:hover {
+            background-color: #0056b3;
+            /* Darker blue on hover */
+        }
+
+        input[type="file"]:active {
+            background-color: #003f7f;
+            /* Even darker blue when clicked */
+        }
+
+        input[type="file"]:disabled {
+            background-color: #cccccc;
+            /* Gray background for disabled state */
+            cursor: not-allowed;
+            /* Not-allowed cursor for disabled input */
+        }
     </style>
 </head>
 
@@ -83,20 +155,49 @@
     </div>
 
     <div id="settings" class="tab-content hidden">
-        <form id="settingsForm">
+        <h3>Windspeed</h3>
+
+        <div id="windspeedButtons" style="margin-bottom: 10px;">
+            <button>General FAI</button>
+            <button>F1x</button>
+            <button>F2x</button>
+            <button>F3K</button>
+            <button>F3L</button>
+            <button>F3B/F3G/F3J</button>
+            <button>F3F</button>
+            <button>F3C/F3N</button>
+        </div>
+
+        <form id="windspeedSettingsForm">
             <div class="form-group">
-                <label for="threshold">Threshold [m/s]</label>
-                <input type="number" id="threshold" name="threshold" placeholder="FAI wind threshold 2..12 m/s" min="2"
-                    max="12">
+                <label for="lowerWindspeedThreshold">Lower Threshold [m/s]</label>
+                <input type="number" id="lowerWindspeedThreshold" name="lowerWindspeedThreshold"
+                    placeholder="Lower FAI wind threshold 0..5 m/s" min="0" max="5">
             </div>
+            <div class="form-group">
+                <label for="upperWindspeedThreshold">Upper Threshold [m/s]</label>
+                <input type="number" id="upperWindspeedThreshold" name="upperWindspeedThreshold"
+                    placeholder="Upper FAI wind threshold 2..25 m/s" min="2" max="25">
+            </div>
+            <div class="form-group">
+                <label for="windspeedDurationRange">Duration of Window [s]</label>
+                <input type="number" id="windspeedDurationRange" name="windspeedDurationRange"
+                    placeholder="Duration, how long the windspeed should be inside thresholds 10..120 s" min=10"
+                    max="120">
+            </div>
+            <div class="form-group">
+                <label for="windspeedNumberOfWindows">Number of Windows</label>
+                <input type="number" id="windspeedNumberOfWindows" name="windspeedNumberOfWindows"
+                    placeholder="Number of windows which should be reached for contest abortion 1..10" min="1" max="10">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        <h3>System</h3>
+        <form id="systemSettingsForm">
             <div class="form-group">
                 <label for="volume">Volume [%]</label>
                 <input type="number" id="volume" name="volume" placeholder="Speaker volume 0..100%" min="0" max="100">
             </div>
-            <!-- <div class="form-group">
-                <label for="calibrationfactor">Calibration Value</label>
-                <input type="number" id="calibrationfactor" name="calibrationfactor"  placeholder="Calibration factor - currently not used" min="1" max="1">
-            </div> -->
             <div class="form-group">
                 <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
                 <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting"
@@ -109,20 +210,21 @@
             </div>
             <button type="submit">Save</button>
         </form>
+        <h3>WiFi</h3>
         <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
 
-        <br>
+        <h3>Firmware</h3>
         <form action="/update?name=firmware" enctype=multipart/form-data method=POST>
             Firmware:
             <br>
             <input type=file accept=.bin,.bin.gz name=firmware>
-            <input type=submit value="Update Firmware">
+            <input type=submit value="Update Firmware" class="styled-button">
         </form>
         <form action="/update?name=filesystem" enctype=multipart/form-data method=POST>
             FileSystem:
             <br>
             <input type=file accept=.bin,.bin.gz name=filesystem>
-            <input type=submit value="Update FileSystem">
+            <input type=submit value="Update FileSystem" class="styled-button">
         </form>
 
     </div>
@@ -145,7 +247,9 @@
 
     <script>
 
-        var evaluationThreshold = 4;
+        var upperEvaluationThreshold = 4;
+        var lowerEvaluationThreshold = 0;
+        var numberOfWindows = 3;
         var fetchStatusIntervalId;
         var fetchLiveDataIntervalId;
         var fetchStatisticsIntervalId;
@@ -208,12 +312,18 @@
                             borderColor: (part) => {
                                 const prevValue = part.p0.parsed.y // start value
                                 const nextValue = part.p1.parsed.y // end value
-                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                                return prevValue > upperEvaluationThreshold
+                                    || nextValue > upperEvaluationThreshold
+                                    || prevValue < lowerEvaluationThreshold
+                                    || nextValue < lowerEvaluationThreshold ? 'red' : 'green' // return with a color by rule
                             },
                             backgroundColor: (part) => {
                                 const prevValue = part.p0.parsed.y // start value
                                 const nextValue = part.p1.parsed.y // end value
-                                return prevValue > evaluationThreshold || nextValue > evaluationThreshold ? 'red' : 'green' // return with a color by rule
+                                return prevValue > upperEvaluationThreshold
+                                    || nextValue > upperEvaluationThreshold
+                                    || prevValue < lowerEvaluationThreshold
+                                    || nextValue < lowerEvaluationThreshold ? 'red' : 'green' // return with a color by rule
                             },
                         }
                     }, {
@@ -276,7 +386,7 @@
                 const data = await response.json();
 
                 // map colors dependent on data values
-                const colors = data.map((y) => y > evaluationThreshold ? 'red' : 'green');
+                const colors = data.map((y) => y > upperEvaluationThreshold ? 'red' : 'green');
                 lineChart.data.datasets[0].pointBorderColor = colors;
                 lineChart.data.datasets[0].pointBackgroundColor = colors;
 
@@ -307,7 +417,7 @@
 
                 // Update background color based on the number of exceeding ranges
                 const exceedingStatusDiv = document.getElementById('exceedingStatus');
-                if (data.ExceededRanges.length >= 3) {
+                if (data.ExceededRanges.length >= numberOfWindows) {
                     exceedingStatusDiv.style.backgroundColor = 'red';
                     exceedingStatusDiv.textContent = 'NOT OK';
                 } else if (data.ExceededRanges.length > 0) {
@@ -410,8 +520,13 @@
             try {
                 const response = await fetch('./settings'); // Replace with your REST API endpoint
                 const settings = await response.json();
-                document.getElementById('threshold').value = settings.Threshold || '';
-                evaluationThreshold = settings.Threshold;
+                document.getElementById('lowerWindspeedThreshold').value = settings.LowerWindspeedThreshold || 0;
+                document.getElementById('upperWindspeedThreshold').value = settings.UpperWindspeedThreshold || 8;
+                document.getElementById('windspeedDurationRange').value = settings.WindspeedDurationRange || 20;
+                document.getElementById('windspeedNumberOfWindows').value = settings.WindspeedNumberOfWindows || 3;
+                upperEvaluationThreshold = settings.UpperWindspeedThreshold || 8;
+                lowerEvaluationThreshold = settings.LowerWindspeedThreshold || 0;
+                numberOfWindows = settings.WindspeedNumberOfWindows || 3;
                 document.getElementById('volume').value = settings.Volume || '';
                 document.getElementById('maximumChargeCurrentSetting').value = settings.MaximumChargeCurrent || 1;
                 document.getElementById('displayBrightnessSetting').value = settings.DisplayBrightness || 2;
@@ -442,6 +557,76 @@
             }
         }
 
+        // Add event listeners to windspeed buttons
+        document.querySelectorAll('#windspeedButtons button').forEach(button => {
+            button.addEventListener('click', () => {
+                const preset = button.textContent.trim(); // Get the button text to determine the preset
+
+                // Define presets for each button
+                const presets = {
+                    'General FAI': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 12,
+                        windspeedDurationRange: 60,
+                        windspeedNumberOfWindows: 1
+                    },
+                    'F3K': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 8,
+                        windspeedDurationRange: 20,
+                        windspeedNumberOfWindows: 3
+                    },
+                    'F3L': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 8,
+                        windspeedDurationRange: 60,
+                        windspeedNumberOfWindows: 1
+                    },
+                    'F3B/F3G/F3J': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 12,
+                        windspeedDurationRange: 20,
+                        windspeedNumberOfWindows: 3
+                    },
+                    'F3F': {
+                        lowerWindspeedThreshold: 3,
+                        upperWindspeedThreshold: 25,
+                        windspeedDurationRange: 20,
+                        windspeedNumberOfWindows: 1
+                    },
+                    'F3C/F3N': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 8,
+                        windspeedDurationRange: 20,
+                        windspeedNumberOfWindows: 1
+                    },
+                    'F1x': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 9,
+                        windspeedDurationRange: 20,
+                        windspeedNumberOfWindows: 1
+                    },
+                    'F2x': {
+                        lowerWindspeedThreshold: 0,
+                        upperWindspeedThreshold: 9,
+                        windspeedDurationRange: 30,
+                        windspeedNumberOfWindows: 1
+                    }
+                };
+
+                // Get the preset values for the clicked button
+                const values = presets[preset];
+
+                if (values) {
+                    // Update the form fields with the preset values
+                    document.getElementById('lowerWindspeedThreshold').value = values.lowerWindspeedThreshold;
+                    document.getElementById('upperWindspeedThreshold').value = values.upperWindspeedThreshold;
+                    document.getElementById('windspeedDurationRange').value = values.windspeedDurationRange;
+                    document.getElementById('windspeedNumberOfWindows').value = values.windspeedNumberOfWindows;
+                }
+            });
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             // Fetch settings and populate the settings form
             fetchSettings();
@@ -460,18 +645,17 @@
             document.getElementById('live-data').classList.remove('hidden');
         });
 
-        // Handle settings form submission
-        document.getElementById('settingsForm').addEventListener('submit', async (event) => {
+        async function submitSettings(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const settings = Object.fromEntries(formData.entries());
-            var jsonSettings = {};
-            jsonSettings["Volume"] = settings.volume;
-            jsonSettings["Threshold"] = settings.threshold;
-            jsonSettings["CalibrationValue"] = settings.calibrationfactor;
-            jsonSettings["MaximumChargeCurrent"] = settings.maximumChargeCurrentSetting;
-            jsonSettings["DisplayBrightness"] = settings.displayBrightnessSetting;
 
+            var jsonSettings = {};
+            jsonSettings["LowerWindspeedThreshold"] = document.getElementById('lowerWindspeedThreshold').value;
+            jsonSettings["UpperWindspeedThreshold"] = document.getElementById('upperWindspeedThreshold').value;
+            jsonSettings["WindspeedDurationRange"] = document.getElementById('windspeedDurationRange').value;
+            jsonSettings["WindspeedNumberOfWindows"] = document.getElementById('windspeedNumberOfWindows').value;
+            jsonSettings["MaximumChargeCurrent"] = document.getElementById('maximumChargeCurrentSetting').value;
+            jsonSettings["DisplayBrightness"] = document.getElementById('displayBrightnessSetting').value;
+            jsonSettings["Volume"] = document.getElementById('volume').value;
 
             try {
                 // Send the form data as a POST request to the /settings endpoint
@@ -485,14 +669,21 @@
 
                 if (response.ok) {
                     console.log('Settings successfully updated');
-                    evaluationThreshold = settings.threshold;
+                    lowerEvaluationThreshold = document.getElementById('lowerWindspeedThreshold').value;
+                    upperEvaluationThreshold = document.getElementById('upperWindspeedThreshold').value;
+                    numberOfWindows = document.getElementById('windspeedNumberOfWindows').value;
                 } else {
                     console.error('Failed to update settings:', response.statusText);
                 }
             } catch (error) {
                 console.error('Error sending settings:', error);
             }
-        });
+        }
+
+        // Handle settings form submission
+        document.getElementById('windspeedSettingsForm').addEventListener('submit', async (event) => submitSettings(event));
+        document.getElementById('systemSettingsForm').addEventListener('submit', async (event) => submitSettings(event));
+
 
         document.getElementById('resetWiFiButton').addEventListener('click', async (event) => {
             event.preventDefault();
@@ -508,7 +699,7 @@
 
                 if (response.ok) {
                     console.log('WiFi successfully resetted');
-                    evaluationThreshold = settings.threshold;
+                    upperEvaluationThreshold = settings.threshold;
                 } else {
                     console.error('Failed to reset wifi settings:', response.statusText);
                 }

@@ -99,10 +99,17 @@ In the *Settings* tab you can change the following configuration parameters
 
 | Setting                     | Description                                             |
 | --------------------------- | ------------------------------------------------------- |
-| Threshold [m/s]             | FAI wind threshold 2..12 m/s                            |
+| Lower Threshold [m/s]             | Lower FAI wind threshold 0..5 m/s                            |
+| Upper Threshold [m/s]             | Upper FAI wind threshold 2..25 m/s                            |
+| Duration of Window [s]             | Duration, how long the windspeed should be inside thresholds 10..120 s                            |
+| Number of Windows           | Number of windows which should be reached for contest abortion 1..10                            |
+
 | Volume [%]                  | Speaker volume 0..100%                                  |
 | Maximum Charge current [mA] | Maximum charge current 100..1000 mA for 2000mAh battery |
 | Display Brightness [%]      | Display background brightness level 0..100%             |
+
+
+By pressing one of the FAI Category buttons, the default values for that category out of the FAI Rules are updated in the fields. You have to press Save to apply the settings.
 
 To reset/erase the saved WiFi settings, you can press the lower button.
 

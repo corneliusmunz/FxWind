@@ -31,15 +31,16 @@ class WindSpeedDisplay
 {
 
 public:
-    WindSpeedDisplay(uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20, WindSpeed *windSpeed = nullptr);
+    WindSpeedDisplay(uint16_t lowerWindspeedThreshold = 0, uint16_t upperWindspeedThreshold = 8, uint16_t evaluationRange = 300, uint16_t windspeedDurationRange = 20, WindSpeed *windSpeed = nullptr);
     void setup();
-    void updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, int brightness);
+    void updateSettings(uint16_t lowerWindspeedThreshold, uint16_t upperWindspeedThreshold, uint16_t evaluationRange, uint16_t windspeedDurationRange, int brightness);
     void draw(DrawType drawType);
 
 private:
     M5GFX _display;
     uint16_t _evaluationRange = 300;
-    uint16_t _windspeedThreshold = 8;
+    uint16_t _lowerWindspeedThreshold = 0;
+    uint16_t _upperWindspeedThreshold = 8;
     uint16_t _windspeedDurationRange = 20;
     WindSpeed *_windSpeed;
     DrawType _currentDrawType;

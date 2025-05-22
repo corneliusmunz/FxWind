@@ -14,18 +14,18 @@ struct WindspeedEvaluation
     float MinWindspeed;
     float AverageWindspeed;
     int NumberOfExceededRanges;
-    int RangeStartIndex[15];
-    int RangeStopIndex[15];
+    int RangeStartIndex[30];
+    int RangeStopIndex[30];
 };
 
 class WindSpeed
 {
 public:
-    WindSpeed(uint8_t sensorPin, uint16_t evaluationRange = 300, uint16_t windspeedThreshold = 8, uint16_t windspeedDurationRange = 20, uint16_t calibrationFactor = 1);
+    WindSpeed(uint8_t sensorPin, uint16_t windspeedLowerThreshold = 0, uint16_t windspeedUpperThreshold = 8, uint16_t windspeedDurationRange = 20, uint16_t evaluationRange = 300, uint16_t numberOfWindowsThreshold = 3, uint16_t calibrationFactor = 1);
     void setupInterruptCallback(void (*externalInterruptCallback)(void));
     void setupEvaluationCallback(std::function<void(void)> evaluationCallback);
     void setup();
-    void updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationValue);
+    void updateSettings(uint16_t windspeedLowerThreshold, uint16_t windspeedUpperThreshold, uint16_t windspeedDurationRange, uint16_t evaluationRange, uint16_t numberOfWindowsThreshold, uint16_t calibrationValue);
     void interruptCallback();
     void calculateWindspeed(bool evaluate = true, bool log = false);
     float getCurrentWindspeed();
@@ -33,6 +33,7 @@ public:
     String getWindspeedJson();
     String getWindspeedEvaluationJson();
     String getWindspeedEvaluationString();
+    String getWindspeedEvaluationString(float windspeedValue);
     String getWindspeedString(bool addUnitSymbol = false);
     int getWindSpeedHistoryArrayElement(int i);
     String getTimestampString();
@@ -41,9 +42,10 @@ private:
     uint8_t _sensorPin;
     uint16_t _calibrationFactor = 1;
     uint16_t _evaluationRange = 300;
-    uint16_t _windspeedThreshold = 8;
+    uint16_t _windspeedLowerThreshold = 0;
+    uint16_t _windspeedUpperThreshold = 8;
     uint16_t _windspeedDurationRange = 20;
-    uint16_t _numberOfRangesThreshold = 3;
+    uint16_t _numberOfWindowsThreshold = 3;
     uint16_t _sampleRate = 1000;
     uint32_t _counter = 0;
     uint32_t _lastCounter = 0;
@@ -65,6 +67,15 @@ private:
     void writeFile(fs::FS &fs, const char *path, const char *message);
     void readFile(fs::FS &fs, const char *path);
     void createDir(fs::FS &fs, const char *path);
+    void storeSnapshot();
+    void storeJsonSnapshot();
+    void storeJsonEvaluationSnapshot();
+    void storeCsvSnapshot();
+    String getSnapshotCsvRow(time_t time, float windspeedValue, char separationChar = ',');
+    String getSnapshotFilePath(String fileType);
+    String getSnapshotLogFileHeader();
+    String getTimestampString(time_t time);
+    String getSnapshotBaseFilePath();
 };
 
 #endif

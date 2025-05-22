@@ -1,12 +1,14 @@
 #include "WindSpeed.h"
 
-WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t evaluationRange, uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
+WindSpeed::WindSpeed(uint8_t sensorPin, uint16_t windspeedLowerThreshold, uint16_t windspeedUpperThreshold, uint16_t windspeedDurationRange, uint16_t evaluationRange, uint16_t numberOfWindowsThreshold, uint16_t calibrationFactor)
 {
     _sensorPin = sensorPin;
     pinMode(_sensorPin, INPUT_PULLUP);
     _evaluationRange = evaluationRange;
-    _windspeedThreshold = windspeedThreshold;
+    _windspeedLowerThreshold = windspeedLowerThreshold;
+    _windspeedUpperThreshold = windspeedUpperThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _numberOfWindowsThreshold = numberOfWindowsThreshold;
     _calibrationFactor = calibrationFactor;
 }
 
@@ -15,10 +17,13 @@ void WindSpeed::setup()
     setupSDCard();
 }
 
-void WindSpeed::updateSettings(uint16_t windspeedThreshold, uint16_t windspeedDurationRange, uint16_t calibrationFactor)
+void WindSpeed::updateSettings(uint16_t windspeedLowerThreshold, uint16_t windspeedUpperThreshold, uint16_t windspeedDurationRange, uint16_t evaluationRange, uint16_t numberOfWindowsThreshold, uint16_t calibrationFactor)
 {
-    _windspeedThreshold = windspeedThreshold;
+    _windspeedLowerThreshold = windspeedLowerThreshold;
+    _windspeedUpperThreshold = windspeedUpperThreshold;
     _windspeedDurationRange = windspeedDurationRange;
+    _evaluationRange = evaluationRange;
+    _numberOfWindowsThreshold = numberOfWindowsThreshold;
     _calibrationFactor = calibrationFactor;
 }
 
@@ -95,7 +100,8 @@ void WindSpeed::calculateWindspeed(bool evaluate, bool log)
 
 float WindSpeed::getCurrentWindspeed()
 {
-    return (float)_windspeedHistoryArray[0] / 10.0f;
+    float currentWindspeed = ((float)_windspeedHistoryArray[0] / 10.0f);
+    return currentWindspeed;
 }
 
 WindspeedEvaluation WindSpeed::getWindspeedEvaluation()
@@ -117,9 +123,16 @@ void WindSpeed::evaluateWindspeed()
 
     int rangeCounter = 0;
     int exceededRangesCounter = 0;
-    int exceededRangesIndex[15];
+    int numberOfRanges = _evaluationRange / _windspeedDurationRange;
+    int exceededRangesIndex[numberOfRanges];
 
-    for (size_t i = 0; i < 15; i++)
+    for (size_t i = 0; i < 30; i++)
+    {
+        _windspeedEvaluation.RangeStartIndex[i] = 0;
+        _windspeedEvaluation.RangeStopIndex[i] = 0;
+    }
+
+    for (size_t i = 0; i < numberOfRanges; i++)
     {
         exceededRangesIndex[i] = 0;
     }
@@ -137,7 +150,8 @@ void WindSpeed::evaluateWindspeed()
         }
         sumWindspeed += _windspeedHistoryArray[i];
 
-        if (_windspeedHistoryArray[i] > _windspeedThreshold * 10)
+        if (_windspeedHistoryArray[i] < _windspeedLowerThreshold * 10 
+            || _windspeedHistoryArray[i] > _windspeedUpperThreshold * 10)
         {
             rangeCounter++;
         }
@@ -149,7 +163,8 @@ void WindSpeed::evaluateWindspeed()
             rangeCounter = 0;
         }
 
-        if (_windspeedHistoryArray[i] <= _windspeedThreshold * 10)
+        if (_windspeedHistoryArray[i] >= _windspeedLowerThreshold * 10 
+            && _windspeedHistoryArray [i] <= _windspeedUpperThreshold * 10)
         {
             rangeCounter = 0;
         }
@@ -159,21 +174,22 @@ void WindSpeed::evaluateWindspeed()
     _windspeedEvaluation.MaxWindspeed = (float)maxWindspeed / 10.0f;
     _windspeedEvaluation.MinWindspeed = (float)minWindspeed / 10.0f;
     _windspeedEvaluation.AverageWindspeed = (float)(sumWindspeed / _evaluationRange) / 10.0f;
-    for (size_t i = 0; i < 15; i++)
+    for (size_t i = 0; i < numberOfRanges; i++)
     {
         _windspeedEvaluation.RangeStartIndex[i] = exceededRangesIndex[i];
         _windspeedEvaluation.RangeStopIndex[i] = exceededRangesIndex[i] + _windspeedDurationRange;
     }
 
-    if (exceededRangesCounter < _numberOfRangesThreshold)
+    if (exceededRangesCounter < _numberOfWindowsThreshold)
     {
         _isCallbackAlreadySent = false;
     }
 
-    if (exceededRangesCounter >= _numberOfRangesThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
+    if (exceededRangesCounter >= _numberOfWindowsThreshold && !_isCallbackAlreadySent && _evaluationCallback != nullptr)
     {
         _isCallbackAlreadySent = true;
         _evaluationCallback();
+        storeSnapshot();
     }
 }
 
@@ -215,9 +231,46 @@ String WindSpeed::getWindspeedEvaluationString()
 String WindSpeed::getTimestampString()
 {
     time_t t = now();
+    return getTimestampString(t);
+}
+
+String WindSpeed::getTimestampString(time_t time)
+{
     char stringbuffer[100];
-    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(t), month(t), day(t), hour(t), minute(t), second(t));
+    sprintf(stringbuffer, "%4u-%02u-%02u %02u:%02u:%02u", year(time), month(time), day(time), hour(time), minute(time), second(time));
     return String(stringbuffer);
+}
+
+void WindSpeed::storeCsvSnapshot()
+{
+    String csvFilePath = getSnapshotFilePath("csv");
+    time_t time = now();
+    String content;
+    content = getSnapshotLogFileHeader() + String("\r\n");
+    for (size_t i = 0; i < _evaluationRange; i++)
+    {
+        content += getSnapshotCsvRow(time - _evaluationRange + 1 + i, _windspeedHistoryArray[_evaluationRange - 1 - i] / 10.0f, ',') + String("\r\n");
+    }
+    appendFile(SD, csvFilePath.c_str(), content.c_str());
+}
+
+void WindSpeed::storeJsonSnapshot()
+{
+    String jsonFilePath = getSnapshotFilePath("json");
+    writeFile(SD, jsonFilePath.c_str(), getWindspeedJson().c_str());
+}
+
+void WindSpeed::storeJsonEvaluationSnapshot()
+{
+    String jsonEvaluationFilePath = getSnapshotBaseFilePath() + "_evaluation.json";
+    writeFile(SD, jsonEvaluationFilePath.c_str(), getWindspeedEvaluationJson().c_str());
+}
+
+void WindSpeed::storeSnapshot()
+{
+    storeJsonSnapshot();
+    storeJsonEvaluationSnapshot();
+    storeCsvSnapshot();
 }
 
 String WindSpeed::getWindspeedJson()
@@ -264,9 +317,32 @@ String WindSpeed::getWindspeedEvaluationJson()
     return jsonString;
 }
 
+String WindSpeed::getSnapshotCsvRow(time_t time, float windspeedValue, char separationChar)
+{
+    return getTimestampString(time) + separationChar + getWindspeedEvaluationSingleString(windspeedValue);
+}
+
 String WindSpeed::getLogCsvRow(char separationChar)
 {
     return getTimestampString() + separationChar + getWindspeedString() + separationChar + String(M5.Power.getBatteryLevel()) + separationChar + String(M5.Power.getBatteryVoltage());
+}
+
+String WindSpeed::getSnapshotBaseFilePath()
+{
+    time_t t = now();
+    char stringbuffer[100];
+    sprintf(stringbuffer, "/logs/%4u-%02u-%02u_%02u-%02u-%02u_windspeed_snapshot", year(t), month(t), day(t), hour(t), minute(t), second(t));
+    return String(stringbuffer);
+}
+
+String WindSpeed::getSnapshotFilePath(String fileType)
+{
+    return getSnapshotBaseFilePath() + "." + fileType;
+}
+
+String WindSpeed::getSnapshotLogFileHeader()
+{
+    return "Timestamp(UTC), Windspeed[m/s]";
 }
 
 String WindSpeed::getLogFilePath()
@@ -288,7 +364,8 @@ void WindSpeed::updateWindspeedArray(float currentWindspeed)
     {
         _windspeedHistoryArray[i] = _windspeedHistoryArray[i - 1];
     }
-    _windspeedHistoryArray[0] = (int)(currentWindspeed * 10.0f);
+    int calculatedWindspeed = (int)(currentWindspeed * 10.0f);
+    _windspeedHistoryArray[0] = calculatedWindspeed;
 }
 
 void WindSpeed::createDir(fs::FS &fs, const char *path)
