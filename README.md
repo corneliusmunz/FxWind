@@ -96,7 +96,6 @@ For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-cod
 # Ideas and open issues
 
 - [ ] BLE connection 
-- [ ] FAI categories support (automatically apply rules for selected category)
 
 # Appendix
 
@@ -107,18 +106,18 @@ https://www.fai.org/sites/default/files/sc4_vol_f3_soaring_25.pdf
 
 ### Overview of conditions for different FAI competition categories
 
-| Category         | Lower Windspeed threshold [m/s] | Upper Windspeed threshold [m/s] | Window duration [s] | Number of windows exceeded |
-| ---------------- | ------------------------------- | ------------------------------- | ------------------- | -------------------------- |
-| **Gerneral**     | 0                               | 12                              | 60                  | 1                          |
-| **F3K**          | 0                               | 8                               | 20                  | 3                          |
-| **F3B**          | 0                               | 12                              | 20                  | 3                          |
-| **F3G**          | 0                               | 12                              | 20                  | 3                          |
-| **F3J**          | 0                               | 12                              | 20                  | 3                          |
-| **F3L**          | 0                               | 8                               | 60                  | 1                          |
-| **F3F**          | 3                               | 25                              | 20                  | 1                          |
-| **F1x**  | 0                               | 9                               | 20                  | 1                          |
-| **F2x** | 0                               | 9                               | 30                  | 1                          |
-| **F3C/F3N**         | 0                               | 8                               | 20                  | 1                          |
+| Category     | Lower Windspeed threshold [m/s] | Upper Windspeed threshold [m/s] | Window duration [s] | Number of windows exceeded |
+| ------------ | ------------------------------- | ------------------------------- | ------------------- | -------------------------- |
+| **Gerneral** | 0                               | 12                              | 60                  | 1                          |
+| **F3K**      | 0                               | 8                               | 20                  | 3                          |
+| **F3B**      | 0                               | 12                              | 20                  | 3                          |
+| **F3G**      | 0                               | 12                              | 20                  | 3                          |
+| **F3J**      | 0                               | 12                              | 20                  | 3                          |
+| **F3L**      | 0                               | 8                               | 60                  | 1                          |
+| **F3F**      | 3                               | 25                              | 20                  | 1                          |
+| **F1x**      | 0                               | 9                               | 20                  | 1                          |
+| **F2x**      | 0                               | 9                               | 30                  | 1                          |
+| **F3C/F3N**  | 0                               | 8                               | 20                  | 1                          |
 
 
 ### Extracts
