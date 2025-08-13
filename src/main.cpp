@@ -212,56 +212,6 @@ String getDownloadFilesJson()
   return jsonString;
 }
 
-String printDirectory()
-{
-
-  String webpage;
-  File root = SD.open("/logs");
-
-  if (!root)
-  {
-    return String("");
-  }
-  if (!root.isDirectory())
-  {
-    return String("");
-  }
-  File file = root.openNextFile();
-
-  int i = 0;
-  while (file)
-  {
-    if (!file.isDirectory())
-    {
-      webpage += "<tr><td>" + String(file.name()) + "</td>";
-      // webpage += "<td>" + String(file.isDirectory() ? "Dir" : "File") + "</td>";
-      int bytes = file.size();
-      String fsize = "";
-      if (bytes < 1024)
-        fsize = String(bytes) + " B";
-      else if (bytes < (1024 * 1024))
-        fsize = String(bytes / 1024.0, 3) + " KB";
-      else if (bytes < (1024 * 1024 * 1024))
-        fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
-      else
-        fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
-      webpage += "<td>" + fsize + "</td>";
-      webpage += "<td>";
-      webpage += F("<FORM action='./downloads' method='get'>");
-      webpage += F("<button type='submit' name='filename'");
-      webpage += F("' value='");
-      webpage += String(file.name());
-      webpage += F("'>Download</button>");
-      webpage += "</td>";
-      webpage += "</tr>";
-    }
-    file = root.openNextFile();
-    i++;
-  }
-  file.close();
-  return webpage;
-}
-
 void updateVolume()
 {
   M5.Speaker.setVolume((int)(settings.Volume / 100.00f * 255.0f));
@@ -500,7 +450,6 @@ void setupRtc()
 
   Serial.println("RTC found.");
   auto dt = M5.Rtc.getDateTime();
-  Serial.printf("RTC before set   UTC  :%04d/%02d/%02d  %02d:%02d:%02d\r\n", dt.date.year, dt.date.month, dt.date.date, dt.time.hours, dt.time.minutes, dt.time.seconds);
 
   if (!isWifiOn || isAPModeActive)
   {
@@ -548,7 +497,6 @@ void parseMyPageBody(AsyncWebServerRequest *req, uint8_t *data, size_t len, size
   // int calibrationValue = bodyJSON["CalibrationValue"];
   int displayBrightness = bodyJSON["DisplayBrightness"];
   int maximumChargeCurrent = bodyJSON["MaximumChargeCurrent"];
-  Serial.printf("Volume: %d, LowerWindspeedTreshold: %d, UpperWindspeedTreshold: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", volume, lowerWindspeedThreshold, upperWindspeedThreshold, maximumChargeCurrent, displayBrightness);
   settings.Volume = volume;
   settings.LowerWindspeedThreshold = lowerWindspeedThreshold;
   settings.UpperWindspeedThreshold = upperWindspeedThreshold;
@@ -647,7 +595,6 @@ void setupPreferences()
   settings.CalibrationFactor = preferences.getInt("Calibration", 1);
   settings.DisplayBrightness = preferences.getInt("Brightness", DISPLAY_BRIGHTNESS);
   settings.MaximumChargeCurrent = preferences.getInt("MaxCurrent", CHARGE_CURRENT);
-  Serial.printf("Volume: %d, LowerThreshold: %d, UpperThreshold: %d, DurationRange: %d, EvaluationRange: %d, NumberOfWindows: %d, CalibrationValue: %d, MaxChargeCurrent: %d, DisplayBrightness: %d\n", settings.Volume, settings.UpperWindspeedThreshold, settings.LowerWindspeedThreshold, settings.WindspeedDurationRange, settings.WindspeedEvaluationRange, settings.WindspeedNumberOfWindows, settings.CalibrationFactor, settings.MaximumChargeCurrent, settings.DisplayBrightness);
   preferences.end(); 
   saveSettings();
   updateSettings();
@@ -772,14 +719,12 @@ void evaluateTouches()
 
     if (touchDetail.wasPressed())
     {
-      Serial.println("Touch pressed... start timer");
       touchDuration = millis();
     }
 
     if (touchDetail.wasReleased())
     {
       int duration = millis() - touchDuration;
-      Serial.println("Touch released... Duration: " + String(duration));
       touchDuration = 0;
       if (duration > 3000)
       {
@@ -817,6 +762,5 @@ void loop(void)
     windSpeed.calculateWindspeed(true, true);
     lastMillis = currentMillis;
     windSpeedDisplay.draw((DrawType)menuX);
-    Serial.printf("Level: %d, Voltage: %d, Current: %d, IsCharging:%d, ChargeCurrent: %.2f, isACin: %d \n", M5.Power.getBatteryLevel(), M5.Power.getBatteryVoltage(), M5.Power.getBatteryCurrent(), M5.Power.isCharging(), M5.Power.Axp192.getBatteryChargeCurrent(), M5.Power.Axp192.isACIN());
   }
 }

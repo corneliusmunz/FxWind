@@ -34,6 +34,32 @@
             padding: 5px;
         }
 
+        .settings-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .settings-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007BFF;
+        }
+
+        .settings-section form {
+            background-color: white;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .settings-section button {
+            margin-top: 15px;
+        }
+
         .hidden {
             display: none;
         }
@@ -137,111 +163,143 @@
     </div>
 
     <div id="live-data" class="tab-content">
-        <div id="exceedingStatus" style="margin-top: 5px; padding: 5px; color: white; text-align: center;">
-            OK
+        <div class="settings-section">
+            <h3>Wind Status</h3>
+            <div id="exceedingStatus" style="margin-top: 5px; padding: 5px; color: white; text-align: center;">
+                OK
+            </div>
+            <canvas id="chart"></canvas>
         </div>
-        <canvas id="chart"></canvas>
-        <div id="statistics" style="margin-top: 20px;">
-            <p><strong>Current:</strong> <span id="currentValue"></span> [m/s]</p>
-            <p><strong>Minimum:</strong> <span id="minValue"></span> [m/s]</p>
-            <p><strong>Maximum:</strong> <span id="maxValue"></span> [m/s]</p>
-            <p><strong>Average:</strong> <span id="avgValue"></span> [m/s]</p>
-            <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
+
+        <div class="settings-section">
+            <h3>Statistics</h3>
+            <div id="statistics">
+                <p><strong>Current:</strong> <span id="currentValue"></span> [m/s]</p>
+                <p><strong>Minimum:</strong> <span id="minValue"></span> [m/s]</p>
+                <p><strong>Maximum:</strong> <span id="maxValue"></span> [m/s]</p>
+                <p><strong>Average:</strong> <span id="avgValue"></span> [m/s]</p>
+                <p><strong>Number of Exceeded Ranges:</strong> <span id="numberOfExceededRanges"></span></p>
+            </div>
         </div>
     </div>
 
     <div id="downloads" class="tab-content hidden">
-        <ul id="fileList"></ul>
+        <div class="settings-section">
+            <h3>Available Files</h3>
+            <ul id="fileList"></ul>
+        </div>
     </div>
 
     <div id="settings" class="tab-content hidden">
-        <h3>Windspeed</h3>
-
-        <div id="windspeedButtons" style="margin-bottom: 10px;">
-            <button>General FAI</button>
-            <button>F1x</button>
-            <button>F2x</button>
-            <button>F3K</button>
-            <button>F3L</button>
-            <button>F3B/F3G/F3J</button>
-            <button>F3F</button>
-            <button>F3C/F3N</button>
+        <div class="settings-section">
+            <h3>Windspeed</h3>
+            <div id="windspeedButtons" style="margin-bottom: 10px;">
+                <button>General FAI</button>
+                <button>F1x</button>
+                <button>F2x</button>
+                <button>F3K</button>
+                <button>F3L</button>
+                <button>F3B/F3G/F3J</button>
+                <button>F3F</button>
+                <button>F3C/F3N</button>
+            </div>
+            <form id="windspeedSettingsForm">
+                <div class="form-group">
+                    <label for="lowerWindspeedThreshold">Lower Threshold [m/s]</label>
+                    <input type="number" id="lowerWindspeedThreshold" name="lowerWindspeedThreshold"
+                        placeholder="Lower FAI wind threshold 0..5 m/s" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label for="upperWindspeedThreshold">Upper Threshold [m/s]</label>
+                    <input type="number" id="upperWindspeedThreshold" name="upperWindspeedThreshold"
+                        placeholder="Upper FAI wind threshold 2..25 m/s" min="2" max="25">
+                </div>
+                <div class="form-group">
+                    <label for="windspeedDurationRange">Duration of Window [s]</label>
+                    <input type="number" id="windspeedDurationRange" name="windspeedDurationRange"
+                        placeholder="Duration, how long the windspeed should be inside thresholds 10..120 s" min=10"
+                        max="120">
+                </div>
+                <div class="form-group">
+                    <label for="windspeedNumberOfWindows">Number of Windows</label>
+                    <input type="number" id="windspeedNumberOfWindows" name="windspeedNumberOfWindows"
+                        placeholder="Number of windows which should be reached for contest abortion 1..10" min="1" max="10">
+                </div>
+                <button type="submit">Save</button>
+            </form>
         </div>
 
-        <form id="windspeedSettingsForm">
-            <div class="form-group">
-                <label for="lowerWindspeedThreshold">Lower Threshold [m/s]</label>
-                <input type="number" id="lowerWindspeedThreshold" name="lowerWindspeedThreshold"
-                    placeholder="Lower FAI wind threshold 0..5 m/s" min="0" max="5">
-            </div>
-            <div class="form-group">
-                <label for="upperWindspeedThreshold">Upper Threshold [m/s]</label>
-                <input type="number" id="upperWindspeedThreshold" name="upperWindspeedThreshold"
-                    placeholder="Upper FAI wind threshold 2..25 m/s" min="2" max="25">
-            </div>
-            <div class="form-group">
-                <label for="windspeedDurationRange">Duration of Window [s]</label>
-                <input type="number" id="windspeedDurationRange" name="windspeedDurationRange"
-                    placeholder="Duration, how long the windspeed should be inside thresholds 10..120 s" min=10"
-                    max="120">
-            </div>
-            <div class="form-group">
-                <label for="windspeedNumberOfWindows">Number of Windows</label>
-                <input type="number" id="windspeedNumberOfWindows" name="windspeedNumberOfWindows"
-                    placeholder="Number of windows which should be reached for contest abortion 1..10" min="1" max="10">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        <h3>System</h3>
-        <form id="systemSettingsForm">
-            <div class="form-group">
-                <label for="volume">Volume [%]</label>
-                <input type="number" id="volume" name="volume" placeholder="Speaker volume 0..100%" min="0" max="100">
-            </div>
-            <div class="form-group">
-                <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
-                <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting"
-                    placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
-            </div>
-            <div class="form-group">
-                <label for="displayBrightnessSetting">Display Brightness [%]</label>
-                <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting"
-                    placeholder="Display background brightness level 0..100%" min="30" max="100">
-            </div>
-            <button type="submit">Save</button>
-        </form>
-        <h3>WiFi</h3>
-        <button id="resetWiFiButton" style="margin-top: 10px;">Reset Saved WiFi Settings</button>
+        <div class="settings-section">
+            <h3>System</h3>
+            <form id="systemSettingsForm">
+                <div class="form-group">
+                    <label for="volume">Volume [%]</label>
+                    <input type="number" id="volume" name="volume" placeholder="Speaker volume 0..100%" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="maximumChargeCurrentSetting">Maximum Charge current [mA]</label>
+                    <input type="number" id="maximumChargeCurrentSetting" name="maximumChargeCurrentSetting"
+                        placeholder="Maximum charge current 100..1000 mA for 2000mAh battery" min="100" max="1000">
+                </div>
+                <div class="form-group">
+                    <label for="displayBrightnessSetting">Display Brightness [%]</label>
+                    <input type="number" id="displayBrightnessSetting" name="displayBrightnessSetting"
+                        placeholder="Display background brightness level 0..100%" min="30" max="100">
+                </div>
+                <button type="submit">Save</button>
+            </form>
+        </div>
 
-        <h3>Firmware</h3>
-        <form action="/update?name=firmware" enctype=multipart/form-data method=POST>
-            Firmware:
-            <br>
-            <input type=file accept=.bin,.bin.gz name=firmware>
-            <input type=submit value="Update Firmware" class="styled-button">
-        </form>
-        <form action="/update?name=filesystem" enctype=multipart/form-data method=POST>
-            FileSystem:
-            <br>
-            <input type=file accept=.bin,.bin.gz name=filesystem>
-            <input type=submit value="Update FileSystem" class="styled-button">
-        </form>
+        <div class="settings-section">
+            <h3>WiFi</h3>
+            <button id="resetWiFiButton">Reset Saved WiFi Settings</button>
+        </div>
 
+        <div class="settings-section">
+            <h3>Firmware</h3>
+            <form action="/update?name=firmware" enctype=multipart/form-data method=POST>
+                Firmware:
+                <br>
+                <input type=file accept=.bin,.bin.gz name=firmware>
+                <input type=submit value="Update Firmware" class="styled-button">
+            </form>
+            <form action="/update?name=filesystem" enctype=multipart/form-data method=POST>
+                FileSystem:
+                <br>
+                <input type=file accept=.bin,.bin.gz name=filesystem>
+                <input type=submit value="Update FileSystem" class="styled-button">
+            </form>
+        </div>
     </div>
 
-    <div id="status" class="tab-content">
-        <div id="status" style="margin-top: 20px;">
-            <p><strong>Current Datetime:</strong> <span id="dateTime"></span> (UTC)</p>
-            <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> [%]</p>
-            <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
-            <p><strong>Charging:</strong> <span id="isCharging"></span></p>
-            <p><strong>Charging Current:</strong> <span id="deviceCurrent"></span> [mA]</p>
-            <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
-            <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> [dB]</p>
-            <p><strong>Wifi Mode:</strong> <span id="wifiMode"></span></p>
-            <p><strong>Wifi SSID:</strong> <span id="wifiSSID"></span></p>
-            <p><strong>Wifi Hostname:</strong> <span id="wifiHostname"></span></p>
-            <p><strong>Firmware Version:</strong> <span id="firmwareVersion"></span></p>
+    <div id="status" class="tab-content hidden">
+        <div class="settings-section">
+            <h3>System Status</h3>
+            <div id="status">
+                <p><strong>Current Datetime:</strong> <span id="dateTime"></span> (UTC)</p>
+                <p><strong>Battery Level:</strong> <span id="batteryLevel"></span> [%]</p>
+                <p><strong>Power Connected:</strong> <span id="isPowerConnected"></span></p>
+                <p><strong>Charging:</strong> <span id="isCharging"></span></p>
+                <p><strong>Charging Current:</strong> <span id="deviceCurrent"></span> [mA]</p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Network Information</h3>
+            <div>
+                <p><strong>Wifi IP Address:</strong> <span id="wifiIpAddress"></span></p>
+                <p><strong>Wifi RSSI:</strong> <span id="wifiRssi"></span> [dB]</p>
+                <p><strong>Wifi Mode:</strong> <span id="wifiMode"></span></p>
+                <p><strong>Wifi SSID:</strong> <span id="wifiSSID"></span></p>
+                <p><strong>Wifi Hostname:</strong> <span id="wifiHostname"></span></p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Version Information</h3>
+            <div>
+                <p><strong>Firmware Version:</strong> <span id="firmwareVersion"></span></p>
+            </div>
         </div>
     </div>
 
