@@ -84,14 +84,31 @@ You can find the assembly instructions on the following link
 
 ## Software
 
-The software is based on the Arduino framework and is build, using the PlatformIO develompent environment.
+The software is based on the Arduino framework and is build, using the [PlatformIO](https://platformio.org)  develompent environment. You have two options to get the Software on the controller. You can build the Software by your own or you can use the provided binaries in the [Release](https://github.com/corneliusmunz/FxWind/releases) section and use an online flash tool. Both options are described in the next sections.
+
 
 ### Build
 
-### Setup LittleFS Filesystem
+You can build the software by your own in opening the project in [PlatformIO](https://platformio.org) and choose the option ```Upload```. After the build process, the binaries will be flashed on the connected device. In a second step, you have to use the option ```Build Filesystem Image```. This step will generate a bin file which contains the html and image files which are needed for the web interface. In a last step, you have to use the option ```Upload Filesystem Image```. This will flash the filesystem image on your controller. 
 
-For html File, follow this tutorial https://randomnerdtutorials.com/esp32-vs-code-platformio-littlefs/
+![PlatformIO Build steps](docs/images/Software_platformio_steps.png)
 
+
+### Flash without build
+
+If you want to use the precompiled binaries out of the [Release section](https://github.com/corneliusmunz/FxWind/releases), you can open the following flash tool: https://espressif.github.io/esptool-js/ It is important, that you use the tool in a Chrome based browser. 
+
+After opening the webpage, you have to change the baudrate to the value ```460800``` and press the ```Connect``` Button. 
+
+![Flash step 1](docs/images/Software_flash_step_01.png)
+
+The next step is to erase the flash on the controller. After doing this, enter the Flash Address ```0x0```and select the ```firmware-merged.bin```file out of the release assets. Then press the ```Program``` button and wait until the flash process is finished. 
+
+![Flash step 2](docs/images/Software_flash_step_02.png)
+
+In the final step, the filesystem has to be flashed on the controller. For this task you have to enter the Flash Address ```0x00c90000``` and select the ```littlefs.bin``` file out of the release assets. Then press the ```Program``` button. Now you are done and the controller is ready to go.
+
+![Flash step 3](docs/images/Software_flash_step_03.png)
 
 # Ideas and open issues
 
