@@ -41,3 +41,15 @@ The connection between controller case and the windspeed sensor itself is done w
 ![USB cable](images/assembly_07.jpeg)
 ![USB cable](images/assembly_08.jpeg)
 ![USB cable](images/assembly_09.jpeg)
+
+## Windspeed connector
+The Windspeed sensor has an positive and negative impuls output and needs a power supply. The following mapping is used
+
+| Windspeed sensor | Signal                              |
+| ---------------- | ----------------------------------- |
+| black            | GND                                 |
+| brown            | +5V                                 |
+| blue             | Positive impuls signal              |
+| yellow           | Negative impuls signal (not needed) |
+
+![USB cable](images/assembly_10.jpeg)
